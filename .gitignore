@@ -1,0 +1,11 @@
+.DS_Store
+.build/
+*.pyc
+__pycache__/
+
+# Local/generated runtime assets
+work/
+outputs/
+
+# Local secrets or generated command snippets
+*.env
