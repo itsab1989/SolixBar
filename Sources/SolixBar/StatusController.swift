@@ -7,6 +7,7 @@ final class StatusController: NSObject {
     private let historyStore = SolixHistoryStore.shared
     private var timer: Timer?
     private var lastSnapshot: SolixSnapshot?
+    private var lastSnapshotMode: DataSourceMode?
     private var lastError: String?
     private var settingsWindow: SettingsWindowController?
     private var largeGraphWindow: LargeGraphWindowController?
@@ -39,9 +40,12 @@ final class StatusController: NSObject {
             do {
                 let snapshot = try await provider().fetchSnapshot()
                 lastSnapshot = snapshot
+                lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
                 historyStore.record(snapshot)
             } catch {
+                lastSnapshot = nil
+                lastSnapshotMode = nil
                 lastError = error.localizedDescription
             }
             updateTitle()
@@ -52,7 +56,7 @@ final class StatusController: NSObject {
     }
 
     private func updateTitle() {
-        guard let snapshot = lastSnapshot else {
+        guard let snapshot = currentSnapshot() else {
             setStatusTitle(lastError == nil ? "SOLIX" : "SOLIX !")
             return
         }
@@ -71,7 +75,7 @@ final class StatusController: NSObject {
     private func rebuildMenu() {
         let menu = NSMenu()
 
-        if let snapshot = lastSnapshot {
+        if let snapshot = currentSnapshot() {
             menu.addItem(dashboardItem(snapshot))
         } else {
             menu.addItem(header("Anker SOLIX"))
@@ -451,7 +455,7 @@ final class StatusController: NSObject {
     @objc private func openDesktopWidget() {
         if desktopWidgetWindow == nil {
             desktopWidgetWindow = DesktopWidgetWindowController(
-                snapshotProvider: { [weak self] in self?.lastSnapshot },
+                snapshotProvider: { [weak self] in self?.currentSnapshot() },
                 graphProvider: { [weak self] in self?.graphSamples() ?? [] }
             )
         }
@@ -466,10 +470,53 @@ final class StatusController: NSObject {
             Task { @MainActor in self?.refresh() }
         }
         updateMenuBarIcon()
+        clearStaleSnapshotIfNeeded()
         updateTitle()
         rebuildMenu()
         if refreshNow {
             refresh()
+        }
+    }
+
+    private func currentSnapshot() -> SolixSnapshot? {
+        guard lastSnapshotMode == settings.dataSourceMode else { return nil }
+        return lastSnapshot
+    }
+
+    private func clearStaleSnapshotIfNeeded() {
+        guard lastSnapshotMode == settings.dataSourceMode else {
+            lastSnapshot = nil
+            lastSnapshotMode = nil
+            lastError = configurationMessage()
+            return
+        }
+
+        if !isCurrentDataSourceConfigured {
+            lastSnapshot = nil
+            lastSnapshotMode = nil
+            lastError = configurationMessage()
+        }
+    }
+
+    private var isCurrentDataSourceConfigured: Bool {
+        switch settings.dataSourceMode {
+        case .demo:
+            true
+        case .command:
+            !settings.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .url:
+            !settings.urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
+    private func configurationMessage() -> String? {
+        switch settings.dataSourceMode {
+        case .demo:
+            nil
+        case .command:
+            isCurrentDataSourceConfigured ? "Noch keine Daten vom JSON-Befehl geladen." : "Kein JSON-Befehl konfiguriert."
+        case .url:
+            isCurrentDataSourceConfigured ? "Noch keine Daten von der JSON-URL geladen." : "Keine JSON-URL konfiguriert."
         }
     }
 
