@@ -148,9 +148,11 @@ final class DesktopWidgetView: NSView {
             visibleMetrics: AppSettings.shared.graphMetrics,
             size: NSSize(width: 342, height: 150)
         )
-        let resizeHandle = WidgetResizeHandleView()
+        let rightResizeHandle = WidgetResizeHandleView(zone: .right)
+        let bottomResizeHandle = WidgetResizeHandleView(zone: .bottom)
+        let cornerResizeHandle = WidgetResizeHandleView(zone: .bottomRight)
 
-        for view in [title, subtitle, statusPill, battery, solar, grid, graph, resizeHandle] {
+        for view in [title, subtitle, statusPill, battery, solar, grid, graph, rightResizeHandle, bottomResizeHandle, cornerResizeHandle] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -187,10 +189,20 @@ final class DesktopWidgetView: NSView {
             graph.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
             graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -28),
 
-            resizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            resizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            resizeHandle.widthAnchor.constraint(equalToConstant: 24),
-            resizeHandle.heightAnchor.constraint(equalToConstant: 24)
+            rightResizeHandle.topAnchor.constraint(equalTo: topAnchor, constant: 72),
+            rightResizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor),
+            rightResizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -34),
+            rightResizeHandle.widthAnchor.constraint(equalToConstant: 18),
+
+            bottomResizeHandle.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 28),
+            bottomResizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -34),
+            bottomResizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomResizeHandle.heightAnchor.constraint(equalToConstant: 18),
+
+            cornerResizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7),
+            cornerResizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -7),
+            cornerResizeHandle.widthAnchor.constraint(equalToConstant: 28),
+            cornerResizeHandle.heightAnchor.constraint(equalToConstant: 28)
         ])
     }
 
@@ -417,14 +429,27 @@ fileprivate enum WidgetResizeZone {
     }
 }
 
-final class WidgetResizeHandleView: NSView {
+fileprivate final class WidgetResizeHandleView: NSView {
+    private let zone: WidgetResizeZone
     private var startMouseLocation = NSPoint.zero
     private var startFrame = NSRect.zero
+
+    init(zone: WidgetResizeZone) {
+        self.zone = zone
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        toolTip = WidgetResizeHandleView.tooltip(for: zone)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     override var acceptsFirstResponder: Bool { true }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .resizeUpDown)
+        addCursorRect(bounds, cursor: zone.includesRight && !zone.includesBottom ? .resizeLeftRight : .resizeUpDown)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -438,20 +463,66 @@ final class WidgetResizeHandleView: NSView {
             window: window,
             from: startFrame,
             mouseStart: startMouseLocation,
-            zone: .bottomRight
+            zone: zone
         )
     }
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        let color = NSColor.secondaryLabelColor.withAlphaComponent(0.65)
+        let color = NSColor.secondaryLabelColor.withAlphaComponent(0.72)
         color.setStroke()
-        for offset in stride(from: CGFloat(6), through: CGFloat(16), by: 5) {
+        switch zone {
+        case .right:
+            drawRightGrip(color: color)
+        case .bottom:
+            drawBottomGrip(color: color)
+        case .bottomRight:
+            drawCornerGrip(color: color)
+        }
+    }
+
+    private func drawRightGrip(color: NSColor) {
+        color.setStroke()
+        for offset in stride(from: CGFloat(7), through: bounds.height - 7, by: 8) {
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: bounds.midX - 2, y: offset))
+            path.line(to: NSPoint(x: bounds.midX + 2, y: offset))
+            path.lineWidth = 1.4
+            path.stroke()
+        }
+    }
+
+    private func drawBottomGrip(color: NSColor) {
+        color.setStroke()
+        let center = bounds.midX
+        for offset in stride(from: CGFloat(-18), through: CGFloat(18), by: 8) {
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: center + offset, y: bounds.midY - 2))
+            path.line(to: NSPoint(x: center + offset, y: bounds.midY + 2))
+            path.lineWidth = 1.4
+            path.stroke()
+        }
+    }
+
+    private func drawCornerGrip(color: NSColor) {
+        color.setStroke()
+        for offset in stride(from: CGFloat(7), through: CGFloat(19), by: 5) {
             let path = NSBezierPath()
             path.move(to: NSPoint(x: bounds.maxX - offset, y: bounds.minY + 4))
             path.line(to: NSPoint(x: bounds.maxX - 4, y: bounds.minY + offset))
             path.lineWidth = 1.2
             path.stroke()
+        }
+    }
+
+    private static func tooltip(for zone: WidgetResizeZone) -> String {
+        switch zone {
+        case .right:
+            "Hier ziehen, um das Widget breiter zu machen."
+        case .bottom:
+            "Hier ziehen, um das Widget höher zu machen."
+        case .bottomRight:
+            "Hier ziehen, um das Widget größer zu machen."
         }
     }
 }

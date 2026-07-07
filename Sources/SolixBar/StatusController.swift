@@ -371,9 +371,8 @@ final class StatusController: NSObject {
                 continue
             }
             if settings.showEnergyFlowArrows,
-               let flow = energyFlowArrow(for: metric, snapshot: snapshot),
-               let image = coloredSymbol(flow.symbol, color: flow.color, accessibilityDescription: flow.description) {
-                result.append(imageAttachment(image))
+               let flow = energyFlowText(for: metric, snapshot: snapshot) {
+                result.append(textAttachment(flow.text, color: flow.color, weight: .bold))
                 result.append(textAttachment(" "))
             }
             if settings.showMenuBarMetricSymbols,
@@ -394,19 +393,38 @@ final class StatusController: NSObject {
         let flows: [BarMetric] = [.solar, .batteryFlow, .grid]
         var didAppend = false
         for metric in flows {
-            guard let flow = energyFlowArrow(for: metric, snapshot: snapshot),
-                  let image = coloredSymbol(flow.symbol, color: flow.color, accessibilityDescription: flow.description) else {
+            guard let flow = energyFlowText(for: metric, snapshot: snapshot) else {
                 continue
             }
             if didAppend {
                 result.append(textAttachment(" "))
             }
-            result.append(imageAttachment(image))
+            result.append(textAttachment(flow.text, color: flow.color, weight: .bold))
             didAppend = true
         }
 
         if !didAppend {
             result.append(textAttachment("-", color: .secondaryLabelColor))
+        }
+    }
+
+    private func energyFlowText(for metric: BarMetric, snapshot: SolixSnapshot) -> (text: String, color: NSColor)? {
+        switch metric {
+        case .solar:
+            guard let watts = snapshot.solarWatts else { return nil }
+            return watts > 0 ? ("↓", productionColor(watts)) : ("↕", .systemGray)
+        case .grid:
+            guard let watts = snapshot.gridWatts else { return nil }
+            if watts > 0 { return ("↑", consumptionColor(watts)) }
+            if watts < 0 { return ("↓", storageColor(abs(watts))) }
+            return ("↕", .systemGray)
+        case .batteryFlow:
+            guard let watts = snapshot.batteryWatts else { return nil }
+            if watts > 0 { return ("↓", storageColor(watts)) }
+            if watts < 0 { return ("↑", consumptionColor(abs(watts))) }
+            return ("↕", .systemGray)
+        default:
+            return nil
         }
     }
 
@@ -449,11 +467,11 @@ final class StatusController: NSObject {
         return NSAttributedString(attachment: attachment)
     }
 
-    private func textAttachment(_ string: String, color: NSColor = .labelColor) -> NSAttributedString {
+    private func textAttachment(_ string: String, color: NSColor = .labelColor, weight: NSFont.Weight = .medium) -> NSAttributedString {
         NSAttributedString(
             string: string,
             attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * settings.menuBarScale), weight: .medium),
+                .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * settings.menuBarScale), weight: weight),
                 .foregroundColor: color
             ]
         )

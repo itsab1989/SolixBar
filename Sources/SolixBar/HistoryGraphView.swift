@@ -302,24 +302,33 @@ final class HistoryGraphView: NSView {
 
     private func drawLegend() {
         let y = bounds.maxY - 25
-        var x = max(120, bounds.width - CGFloat(visibleMetrics.count * 72))
+        var x = max(120, bounds.width - CGFloat(visibleMetrics.count * 82))
         if visibleMetrics.contains(.battery) {
-            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y)
-            x += 62
-        }
-        if visibleMetrics.contains(.solar) {
-            drawLegendItem(title: "Solar", color: solarColor, x: x, y: y)
+            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y, width: 58)
             x += 66
         }
+        if visibleMetrics.contains(.solar) {
+            drawLegendItem(title: "Solar", color: solarColor, x: x, y: y, width: 64)
+            x += 72
+        }
         if visibleMetrics.contains(.grid) {
-            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y)
+            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y, width: 58)
         }
     }
 
-    private func drawLegendItem(title: String, color: NSColor, x: CGFloat, y: CGFloat) {
+    private func drawLegendItem(title: String, color: NSColor, x: CGFloat, y: CGFloat, width: CGFloat) {
+        let badgeRect = NSRect(x: x - 7, y: y - 5, width: width, height: 20)
+        (color.withAlphaComponent(0.18).blended(withFraction: 0.20, of: graphBackground) ?? color.withAlphaComponent(0.18)).setFill()
+        NSBezierPath(roundedRect: badgeRect, xRadius: 7, yRadius: 7).fill()
+
+        color.withAlphaComponent(0.45).setStroke()
+        let border = NSBezierPath(roundedRect: badgeRect, xRadius: 7, yRadius: 7)
+        border.lineWidth = 1
+        border.stroke()
+
         color.setFill()
-        NSBezierPath(ovalIn: NSRect(x: x, y: y + 2, width: 8, height: 8)).fill()
-        drawText(title, at: NSPoint(x: x + 12, y: y - 1), font: .systemFont(ofSize: 11, weight: .semibold), color: .secondaryLabelColor)
+        NSBezierPath(ovalIn: NSRect(x: x, y: y + 1, width: 8, height: 8)).fill()
+        drawText(title, at: NSPoint(x: x + 12, y: y - 2), font: .systemFont(ofSize: 11, weight: .bold), color: color)
     }
 
     private func maxPowerValue() -> Int {

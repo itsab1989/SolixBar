@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.7 - 2026-07-07
+
+- Replaced the app icon with the new energy-flow battery design.
+- Switched menu bar energy-flow indicators to clear text arrows that change direction by import, export, charging, and discharging.
+- Added visible right, bottom, and corner resize grips to the desktop widget.
+- Added colored label backgrounds to the graph legend.
+
 ## 0.1.6 - 2026-07-07
 
 - Made graph x-axis labels explicitly depend on the selected range.
