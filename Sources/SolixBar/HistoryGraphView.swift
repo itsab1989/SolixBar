@@ -3,6 +3,7 @@ import AppKit
 final class HistoryGraphView: NSView {
     private let samples: [SolixHistorySample]
     private let rangeTitle: String
+    private let range: HistoryRange
     private let rangeDuration: TimeInterval
     private let visibleMetrics: [GraphMetric]
     private var animationProgress: CGFloat = 0
@@ -17,12 +18,14 @@ final class HistoryGraphView: NSView {
     init(
         samples: [SolixHistorySample],
         rangeTitle: String,
+        range: HistoryRange = AppSettings.shared.historyRange,
         rangeDuration: TimeInterval = AppSettings.shared.historyDuration,
         visibleMetrics: [GraphMetric] = AppSettings.shared.graphMetrics,
         size: NSSize = NSSize(width: 320, height: 170)
     ) {
         self.samples = samples.sorted { $0.date < $1.date }
         self.rangeTitle = rangeTitle
+        self.range = range
         self.rangeDuration = rangeDuration
         self.visibleMetrics = visibleMetrics.isEmpty ? GraphMetric.allCases : visibleMetrics
         super.init(frame: NSRect(origin: .zero, size: size))
@@ -49,16 +52,17 @@ final class HistoryGraphView: NSView {
         drawHeader()
         drawLegend()
 
-        guard samples.count >= 2 else {
-            drawEmptyState()
-            return
-        }
-
         let plot = NSRect(x: 44, y: 40, width: bounds.width - 92, height: bounds.height - 82)
         let maxPower = maxPowerValue()
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
         drawTimeLabels(in: plot)
+
+        guard samples.count >= 2 else {
+            drawEmptyState()
+            return
+        }
+
         if visibleMetrics.contains(.battery) {
             drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 2.8)
         }
@@ -157,15 +161,12 @@ final class HistoryGraphView: NSView {
 
     private func drawTimeLabels(in rect: NSRect) {
         let domain = timeDomain()
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
-        formatter.dateFormat = timeLabelFormat(for: domain.end.timeIntervalSince(domain.start))
-
-        let tickCount = bounds.width < 430 ? 3 : 5
-        for index in 0..<tickCount {
-            let progress = tickCount == 1 ? 0 : Double(index) / Double(tickCount - 1)
+        for tick in timeTicks(for: domain) {
+            let progress = domain.end.timeIntervalSince(domain.start) > 0
+                ? tick.date.timeIntervalSince(domain.start) / domain.end.timeIntervalSince(domain.start)
+                : 0
             let date = domain.start.addingTimeInterval(domain.end.timeIntervalSince(domain.start) * progress)
-            let text = index == tickCount - 1 && domain.end.timeIntervalSinceNow > -75 ? "Jetzt" : formatter.string(from: date)
+            let text = tick.label ?? timeLabel(for: date, isLast: tick.isLast)
             let font = NSFont.systemFont(ofSize: 10, weight: .medium)
             let width = (text as NSString).size(withAttributes: [.font: font]).width
             let x = rect.minX + rect.width * CGFloat(progress)
@@ -225,14 +226,43 @@ final class HistoryGraphView: NSView {
         return (end.addingTimeInterval(-duration), end)
     }
 
-    private func timeLabelFormat(for duration: TimeInterval) -> String {
-        if duration <= 30 * 60 * 60 {
-            return "HH:mm"
+    private func timeTicks(for domain: (start: Date, end: Date)) -> [(date: Date, label: String?, isLast: Bool)] {
+        let count: Int
+        switch range {
+        case .current:
+            count = bounds.width < 430 ? 4 : 5
+        case .day:
+            count = bounds.width < 430 ? 4 : 5
+        case .week:
+            count = bounds.width < 430 ? 4 : 5
+        case .month:
+            count = bounds.width < 430 ? 4 : 6
+        case .custom:
+            count = bounds.width < 430 ? 4 : 5
         }
-        if duration <= 35 * 24 * 60 * 60 {
-            return "dd.MM"
+
+        return (0..<count).map { index in
+            let progress = count == 1 ? 0 : Double(index) / Double(count - 1)
+            let date = domain.start.addingTimeInterval(domain.end.timeIntervalSince(domain.start) * progress)
+            return (date: date, label: index == count - 1 ? "Jetzt" : nil, isLast: index == count - 1)
         }
-        return "MM/yy"
+    }
+
+    private func timeLabel(for date: Date, isLast: Bool) -> String {
+        if isLast { return "Jetzt" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        switch range {
+        case .current, .day:
+            formatter.dateFormat = "HH:mm"
+        case .week:
+            formatter.dateFormat = "E dd.MM"
+        case .month:
+            formatter.dateFormat = "dd.MM"
+        case .custom:
+            formatter.dateFormat = rangeDuration <= 35 * 24 * 60 * 60 ? "dd.MM" : "MM/yy"
+        }
+        return formatter.string(from: date)
     }
 
     private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat) {

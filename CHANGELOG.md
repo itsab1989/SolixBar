@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.6 - 2026-07-07
+
+- Made graph x-axis labels explicitly depend on the selected range.
+- 24-hour ranges now show time labels, while 7-day and longer ranges show date-based labels.
+- Kept grid and x-axis labels visible even when there are not yet enough samples for a line.
+
 ## 0.1.5 - 2026-07-07
 
 - Fixed desktop widget resizing by preserving the current window frame during refreshes.

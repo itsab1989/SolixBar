@@ -143,6 +143,7 @@ final class DesktopWidgetView: NSView {
         let graph = HistoryGraphView(
             samples: samples,
             rangeTitle: AppSettings.shared.historyRange.title,
+            range: AppSettings.shared.historyRange,
             rangeDuration: AppSettings.shared.historyDuration,
             visibleMetrics: AppSettings.shared.graphMetrics,
             size: NSSize(width: 342, height: 150)
