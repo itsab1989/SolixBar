@@ -4,6 +4,9 @@
 
 - Added clearer screenshots to the GitHub homepage and README.
 - Improved tooltip texts with short explanations for each field.
+- Reworded metric tooltips so they explain what each field means.
+- Added total yield as a dashboard, widget, and menu bar metric.
+- Lightened metric panel backgrounds and made panel animation more subtle.
 - Raised graph power scale to at least 2000 W.
 - Added subtle graph line animation.
 - Added soft animated backgrounds to dashboard and widget metric panels.

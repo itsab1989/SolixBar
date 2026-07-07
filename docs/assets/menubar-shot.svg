@@ -21,5 +21,7 @@
     <text x="254" y="6">Netzbezug</text>
     <circle cx="404" cy="0" r="7" fill="#111815"/>
     <text x="422" y="6">Heutiger Ertrag</text>
+    <circle cx="604" cy="0" r="7" fill="#7c3aed"/>
+    <text x="622" y="6">Gesamtertrag</text>
   </g>
 </svg>

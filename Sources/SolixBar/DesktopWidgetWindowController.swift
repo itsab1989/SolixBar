@@ -9,7 +9,7 @@ final class DesktopWidgetWindowController: NSWindowController {
         self.snapshotProvider = snapshotProvider
         self.graphProvider = graphProvider
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 390, height: 470),
+            contentRect: NSRect(x: 0, y: 0, width: 390, height: 520),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -40,7 +40,7 @@ final class DesktopWidgetView: NSView {
     init(snapshot: SolixSnapshot?, samples: [SolixHistorySample]) {
         self.snapshot = snapshot
         self.samples = samples
-        super.init(frame: NSRect(x: 0, y: 0, width: 390, height: 470))
+        super.init(frame: NSRect(x: 0, y: 0, width: 390, height: 520))
         wantsLayer = true
         layer?.cornerRadius = 20
         layer?.backgroundColor = widgetBackground.cgColor
@@ -83,7 +83,9 @@ final class DesktopWidgetView: NSView {
             [smallMetric("Haus", snapshot?.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
              smallMetric("Netzbezug", signedWatts(snapshot?.gridWatts), "powerplug.fill", gridColor())],
             [smallMetric("Batteriefluss", signedWatts(snapshot?.batteryWatts), "bolt.fill", batteryFlowColor()),
-             smallMetric("Heutiger Ertrag", snapshot?.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple)]
+             smallMetric("Heutiger Ertrag", snapshot?.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple)],
+            [smallMetric("Gesamtertrag", snapshot?.totalKWh.map { String(format: "%.1f kWh", $0) }, "sum", .systemIndigo),
+             smallMetric("Status", snapshot?.status, "checkmark.circle.fill", statusColor)]
         ])
         grid.rowSpacing = 10
         grid.columnSpacing = 10
@@ -145,7 +147,7 @@ final class DesktopWidgetView: NSView {
         panel.wantsLayer = true
         panel.layer?.cornerRadius = 12
         panel.baseColor = panelBackground
-        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.18 : 0.07).blended(withFraction: 0.88, of: panelBackground) ?? panelBackground
+        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.07 : 0.035).blended(withFraction: 0.95, of: panelBackground) ?? panelBackground
         panel.layer?.borderWidth = 1
         panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
 
@@ -246,8 +248,8 @@ final class DesktopWidgetView: NSView {
     private var panelBackground: NSColor {
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(calibratedRed: 0.14, green: 0.15, blue: 0.16, alpha: 1)
-                : NSColor(calibratedRed: 1, green: 1, blue: 1, alpha: 1)
+                ? NSColor(calibratedRed: 0.24, green: 0.25, blue: 0.26, alpha: 1)
+                : NSColor(calibratedRed: 0.995, green: 0.998, blue: 1, alpha: 1)
         }
     }
 
@@ -258,17 +260,21 @@ final class DesktopWidgetView: NSView {
     private func tooltip(for title: String, value: String) -> String {
         switch title {
         case "Akku":
-            return "Aktueller Ladezustand des Speichers: \(value)."
+            return "Hier wird angezeigt, wie voll der Speicher aktuell geladen ist: \(value)."
         case "Solar":
-            return "Aktuelle Solarleistung der Module: \(value)."
+            return "Hier wird angezeigt, wie viel Leistung die Solarmodule gerade erzeugen: \(value)."
         case "Haus":
-            return "Aktueller Verbrauch im Haus: \(value)."
+            return "Hier wird angezeigt, wie viel Leistung dein Haus gerade verbraucht: \(value)."
         case "Netzbezug":
-            return "Leistung aus dem Netz. Negative Werte bedeuten Einspeisung: \(value)."
+            return "Hier wird angezeigt, wie viel Leistung aus dem Netz bezogen wird. Negative Werte bedeuten Einspeisung: \(value)."
         case "Batteriefluss":
-            return "Lade- oder Entladeleistung des Akkus: \(value)."
+            return "Hier wird angezeigt, ob und mit welcher Leistung der Akku lädt oder entlädt: \(value)."
         case "Heutiger Ertrag":
-            return "Bisher erzeugte Energie seit Tagesbeginn: \(value)."
+            return "Hier wird angezeigt, wie viel Solarenergie heute bereits erzeugt wurde: \(value)."
+        case "Gesamtertrag":
+            return "Hier wird angezeigt, wie viel Solarenergie insgesamt bisher erfasst wurde: \(value)."
+        case "Status":
+            return "Hier wird angezeigt, ob die Datenquelle aktuell erreichbar ist: \(value)."
         default:
             return "\(title): \(value)."
         }

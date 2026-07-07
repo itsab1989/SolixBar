@@ -17,7 +17,7 @@ final class SolixMenuDashboardView: NSView {
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
-        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: 580))
+        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: 622))
         wantsLayer = true
         layer?.backgroundColor = backgroundColor.cgColor
         layer?.cornerRadius = 16
@@ -60,7 +60,8 @@ final class SolixMenuDashboardView: NSView {
             compactMetricRow("Hausverbrauch", snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
             compactMetricRow("Netzbezug", signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
             compactMetricRow("Akku-Fluss", signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
-            compactMetricRow("Heutiger Ertrag", snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple)
+            compactMetricRow("Heutiger Ertrag", snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple),
+            compactMetricRow("Gesamtertrag", snapshot.totalKWh.map { String(format: "%.1f kWh", $0) }, "sum", .systemIndigo)
         ])
         details.orientation = .vertical
         details.spacing = 8
@@ -116,7 +117,7 @@ final class SolixMenuDashboardView: NSView {
         panel.wantsLayer = true
         panel.layer?.cornerRadius = 14
         panel.baseColor = panelColor
-        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.20 : 0.08).blended(withFraction: 0.82, of: panelColor) ?? panelColor
+        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.08 : 0.04).blended(withFraction: 0.94, of: panelColor) ?? panelColor
         panel.layer?.borderWidth = 1
         panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
 
@@ -157,7 +158,7 @@ final class SolixMenuDashboardView: NSView {
         let row = AnimatedPanelView()
         row.toolTip = tooltip(for: title, value: value)
         row.baseColor = panelColor
-        row.highlightColor = color.withAlphaComponent(isDarkMode ? 0.16 : 0.06).blended(withFraction: 0.9, of: panelColor) ?? panelColor
+        row.highlightColor = color.withAlphaComponent(isDarkMode ? 0.06 : 0.03).blended(withFraction: 0.96, of: panelColor) ?? panelColor
         row.layer?.cornerRadius = 10
         let icon = iconPlate(symbol: symbol, color: color, size: 30, pointSize: 17)
         let titleLabel = NSTextField(labelWithString: title)
@@ -270,17 +271,19 @@ final class SolixMenuDashboardView: NSView {
         let current = value ?? "-"
         switch title {
         case "Akku":
-            return "Aktueller Ladezustand des Speichers: \(current)."
+            return "Hier wird angezeigt, wie voll der Speicher aktuell geladen ist: \(current)."
         case "Solar":
-            return "Aktuelle Solarleistung der Module: \(current)."
+            return "Hier wird angezeigt, wie viel Leistung die Solarmodule gerade erzeugen: \(current)."
         case "Hausverbrauch":
-            return "Aktueller Verbrauch im Haus: \(current)."
+            return "Hier wird angezeigt, wie viel Leistung dein Haus gerade verbraucht: \(current)."
         case "Netzbezug":
-            return "Leistung aus dem Netz. Negative Werte bedeuten Einspeisung: \(current)."
+            return "Hier wird angezeigt, wie viel Leistung aus dem Netz bezogen wird. Negative Werte bedeuten Einspeisung: \(current)."
         case "Akku-Fluss":
-            return "Lade- oder Entladeleistung des Akkus: \(current)."
+            return "Hier wird angezeigt, ob und mit welcher Leistung der Akku lädt oder entlädt: \(current)."
         case "Heutiger Ertrag":
-            return "Bisher erzeugte Energie seit Tagesbeginn: \(current)."
+            return "Hier wird angezeigt, wie viel Solarenergie heute bereits erzeugt wurde: \(current)."
+        case "Gesamtertrag":
+            return "Hier wird angezeigt, wie viel Solarenergie insgesamt bisher erfasst wurde: \(current)."
         default:
             return "\(title): \(current)."
         }
@@ -297,8 +300,8 @@ final class SolixMenuDashboardView: NSView {
     private var panelColor: NSColor {
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(calibratedRed: 0.13, green: 0.14, blue: 0.15, alpha: 1)
-                : NSColor.white
+                ? NSColor(calibratedRed: 0.24, green: 0.25, blue: 0.26, alpha: 1)
+                : NSColor(calibratedRed: 0.995, green: 0.998, blue: 1, alpha: 1)
         }
     }
 

@@ -275,6 +275,8 @@ final class StatusController: NSObject {
             batteryFlowColor(snapshot.batteryWatts)
         case .today:
             .systemGreen
+        case .total:
+            .systemPurple
         case .status:
             .systemGreen
         }
@@ -328,6 +330,8 @@ final class StatusController: NSObject {
             formatBarMetric(metric, value: formatSignedWatts(snapshot.batteryWatts) ?? "--W")
         case .today:
             formatBarMetric(metric, value: snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh")
+        case .total:
+            formatBarMetric(metric, value: snapshot.totalKWh.map { String(format: "%.1fkWh", $0) } ?? "--kWh")
         case .status:
             formatBarMetric(metric, value: snapshot.status ?? "-")
         }

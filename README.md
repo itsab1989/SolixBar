@@ -19,7 +19,7 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 - Live data via local JSON command or JSON URL.
 - Configurable menu bar values, labels, symbols, app icon visibility, and scaling.
 - Login autostart support.
-- Dropdown dashboard with battery, solar, home consumption, grid import, battery flow, daily yield, and status.
+- Dropdown dashboard with battery, solar, home consumption, grid import, battery flow, daily yield, total yield, and status.
 - Animated history graph for battery, solar, and grid import.
 - Graph ranges: current, 24 hours, 7 days, 30 days, and custom.
 - Enlarged graph view on click.

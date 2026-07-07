@@ -13,6 +13,7 @@ enum BarMetric: String, CaseIterable {
     case grid
     case batteryFlow
     case today
+    case total
     case status
 
     var title: String {
@@ -29,6 +30,8 @@ enum BarMetric: String, CaseIterable {
             "Akku-Fluss"
         case .today:
             "Heutiger Ertrag"
+        case .total:
+            "Gesamtertrag"
         case .status:
             "Status"
         }
@@ -48,6 +51,8 @@ enum BarMetric: String, CaseIterable {
             "Fluss"
         case .today:
             "Ertrag"
+        case .total:
+            "Gesamt"
         case .status:
             "Status"
         }
@@ -67,6 +72,8 @@ enum BarMetric: String, CaseIterable {
             "bolt.fill"
         case .today:
             "chart.bar.fill"
+        case .total:
+            "sum"
         case .status:
             "checkmark.circle.fill"
         }

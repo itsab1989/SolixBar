@@ -244,7 +244,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let rows = [
             [BarMetric.battery, .solar, .home],
             [BarMetric.grid, .batteryFlow, .today],
-            [BarMetric.status]
+            [BarMetric.total, .status]
         ].map { metrics in
             metrics.map { metric in
                 let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(applyPreview))
@@ -287,6 +287,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             return "Zeigt, ob der Akku gerade lädt oder entlädt."
         case .today:
             return "Zeigt den heutigen Solarertrag in kWh."
+        case .total:
+            return "Zeigt den gesamten bisher gemessenen Solarertrag in kWh."
         case .status:
             return "Zeigt den aktuellen Status der Datenquelle."
         }
