@@ -3,6 +3,7 @@ import AppKit
 final class HistoryGraphView: NSView {
     private let samples: [SolixHistorySample]
     private let rangeTitle: String
+    private let visibleMetrics: [GraphMetric]
     private var animationProgress: CGFloat = 0
     private var animationTimer: Timer?
     private let animationStart = Date()
@@ -12,16 +13,22 @@ final class HistoryGraphView: NSView {
     private let solarColor = NSColor(calibratedRed: 0.96, green: 0.67, blue: 0.16, alpha: 1)
     private let gridColor = NSColor(calibratedRed: 0.25, green: 0.58, blue: 0.95, alpha: 1)
 
-    init(samples: [SolixHistorySample], rangeTitle: String, size: NSSize = NSSize(width: 320, height: 170)) {
+    init(
+        samples: [SolixHistorySample],
+        rangeTitle: String,
+        visibleMetrics: [GraphMetric] = AppSettings.shared.graphMetrics,
+        size: NSSize = NSSize(width: 320, height: 170)
+    ) {
         self.samples = samples.sorted { $0.date < $1.date }
         self.rangeTitle = rangeTitle
+        self.visibleMetrics = visibleMetrics.isEmpty ? GraphMetric.allCases : visibleMetrics
         super.init(frame: NSRect(origin: .zero, size: size))
         wantsLayer = true
         layer?.cornerRadius = 12
         layer?.backgroundColor = graphBackground.cgColor
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
-        toolTip = "Zeigt Akku, Solar und Netzbezug im gewählten Zeitraum. Klick öffnet die große Ansicht."
+        toolTip = "Zeigt die aktivierten Werte im gewählten Zeitraum. Klick öffnet die große Ansicht."
         startLineAnimation()
     }
 
@@ -49,9 +56,15 @@ final class HistoryGraphView: NSView {
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
         drawTimeLabels(in: plot)
-        drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 2.8)
-        drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 2.8)
-        drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 2.8)
+        if visibleMetrics.contains(.battery) {
+            drawLine(values: animatedPoints(batteryPoints(in: plot)), color: batteryColor, width: 2.8)
+        }
+        if visibleMetrics.contains(.solar) {
+            drawLine(values: animatedPoints(solarPoints(in: plot, maxPower: maxPower)), color: solarColor, width: 2.8)
+        }
+        if visibleMetrics.contains(.grid) {
+            drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 2.8)
+        }
     }
 
     private func startLineAnimation() {
@@ -225,9 +238,18 @@ final class HistoryGraphView: NSView {
 
     private func drawLegend() {
         let y = bounds.maxY - 25
-        drawLegendItem(title: "Akku", color: batteryColor, x: max(120, bounds.width - 225), y: y)
-        drawLegendItem(title: "Solar", color: solarColor, x: max(178, bounds.width - 162), y: y)
-        drawLegendItem(title: "Netz", color: gridColor, x: max(238, bounds.width - 96), y: y)
+        var x = max(120, bounds.width - CGFloat(visibleMetrics.count * 72))
+        if visibleMetrics.contains(.battery) {
+            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y)
+            x += 62
+        }
+        if visibleMetrics.contains(.solar) {
+            drawLegendItem(title: "Solar", color: solarColor, x: x, y: y)
+            x += 66
+        }
+        if visibleMetrics.contains(.grid) {
+            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y)
+        }
     }
 
     private func drawLegendItem(title: String, color: NSColor, x: CGFloat, y: CGFloat) {
@@ -238,7 +260,10 @@ final class HistoryGraphView: NSView {
 
     private func maxPowerValue() -> Int {
         let values = samples.flatMap { sample -> [Int] in
-            [sample.solarWatts ?? 0, max(0, sample.gridWatts ?? 0)]
+            [
+                visibleMetrics.contains(.solar) ? (sample.solarWatts ?? 0) : 0,
+                visibleMetrics.contains(.grid) ? max(0, sample.gridWatts ?? 0) : 0
+            ]
         }
         let rawMax = max(2000, values.max() ?? 2000)
         return Int(ceil(Double(rawMax) / 500.0) * 500)

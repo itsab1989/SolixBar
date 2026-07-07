@@ -9,12 +9,13 @@ final class HistoryGraphMenuView: NSView {
     private let segmented = NSSegmentedControl(labels: HistoryRange.allCases.map(\.shortTitle), trackingMode: .selectOne, target: nil, action: nil)
     private let customDaysField = NSTextField()
     private let graphContainer = NSView()
+    private var graphMetricButtons: [GraphMetric: NSButton] = [:]
 
     init(graphProvider: @escaping () -> [SolixHistorySample], onRangeChange: @escaping () -> Void, onOpenLarge: @escaping () -> Void) {
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
-        super.init(frame: NSRect(x: 0, y: 0, width: 396, height: 250))
+        super.init(frame: NSRect(x: 0, y: 0, width: 396, height: 282))
         wantsLayer = true
         layer?.cornerRadius = 14
         layer?.backgroundColor = menuBackground.cgColor
@@ -50,7 +51,9 @@ final class HistoryGraphMenuView: NSView {
         customDaysField.textColor = .labelColor
         customDaysField.toolTip = "Anzahl der Tage für den individuellen Zeitraum."
 
-        for view in [title, segmented, customDaysField, graphContainer] {
+        let metricControls = graphMetricControls()
+
+        for view in [title, segmented, customDaysField, metricControls, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -70,22 +73,48 @@ final class HistoryGraphMenuView: NSView {
             customDaysField.widthAnchor.constraint(equalToConstant: 54),
             customDaysField.heightAnchor.constraint(equalToConstant: 25),
 
-            graphContainer.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 10),
+            metricControls.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 10),
+            metricControls.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 13),
+            metricControls.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -13),
+            metricControls.heightAnchor.constraint(equalToConstant: 24),
+
+            graphContainer.topAnchor.constraint(equalTo: metricControls.bottomAnchor, constant: 8),
             graphContainer.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 13),
             graphContainer.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -13),
             graphContainer.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12)
         ])
     }
 
+    private func graphMetricControls() -> NSStackView {
+        let stack = NSStackView()
+        stack.orientation = .horizontal
+        stack.spacing = 8
+
+        for metric in GraphMetric.allCases {
+            let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(changeGraphMetrics))
+            button.font = .systemFont(ofSize: 11, weight: .semibold)
+            button.controlSize = .small
+            button.toolTip = "Blendet \(metric.title) im Graphen ein oder aus."
+            graphMetricButtons[metric] = button
+            stack.addArrangedSubview(button)
+        }
+        return stack
+    }
+
     private func reload() {
         segmented.selectedSegment = HistoryRange.allCases.firstIndex(of: settings.historyRange) ?? 0
         customDaysField.stringValue = String(Int(settings.customHistoryDays))
         customDaysField.isEnabled = settings.historyRange == .custom
+        let selectedMetrics = Set(settings.graphMetrics)
+        for metric in GraphMetric.allCases {
+            graphMetricButtons[metric]?.state = selectedMetrics.contains(metric) ? .on : .off
+        }
 
         graphContainer.subviews.forEach { $0.removeFromSuperview() }
         let graph = HistoryGraphView(
             samples: graphProvider(),
             rangeTitle: settings.historyRange.title,
+            visibleMetrics: settings.graphMetrics,
             size: NSSize(width: 370, height: 191)
         )
         graph.onClick = onOpenLarge
@@ -108,6 +137,13 @@ final class HistoryGraphMenuView: NSView {
 
     @objc private func changeCustomDays() {
         settings.customHistoryDays = Double(max(1, customDaysField.integerValue))
+        reload()
+        onRangeChange()
+    }
+
+    @objc private func changeGraphMetrics() {
+        let selected = GraphMetric.allCases.filter { graphMetricButtons[$0]?.state == .on }
+        settings.graphMetrics = selected.isEmpty ? GraphMetric.allCases : selected
         reload()
         onRangeChange()
     }

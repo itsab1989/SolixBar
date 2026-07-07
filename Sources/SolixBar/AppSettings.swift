@@ -133,6 +133,23 @@ enum HistoryRange: String, CaseIterable {
     }
 }
 
+enum GraphMetric: String, CaseIterable {
+    case battery
+    case solar
+    case grid
+
+    var title: String {
+        switch self {
+        case .battery:
+            "Akku"
+        case .solar:
+            "Solar"
+        case .grid:
+            "Netzbezug"
+        }
+    }
+}
+
 struct AppSettingsSnapshot {
     var dataSourceMode: DataSourceMode
     var command: String
@@ -145,6 +162,7 @@ struct AppSettingsSnapshot {
     var menuBarScale: Double
     var historyRange: HistoryRange
     var customHistoryDays: Double
+    var graphMetrics: [GraphMetric]
 }
 
 @MainActor
@@ -239,6 +257,20 @@ final class AppSettings {
         historyRange.duration(customDays: customHistoryDays)
     }
 
+    var graphMetrics: [GraphMetric] {
+        get {
+            guard let values = defaults.array(forKey: "graphMetrics") as? [String] else {
+                return GraphMetric.allCases
+            }
+            let metrics = values.compactMap(GraphMetric.init(rawValue:))
+            return metrics.isEmpty ? GraphMetric.allCases : metrics
+        }
+        set {
+            let metrics = newValue.isEmpty ? GraphMetric.allCases : newValue
+            defaults.set(metrics.map(\.rawValue), forKey: "graphMetrics")
+        }
+    }
+
     func snapshot() -> AppSettingsSnapshot {
         AppSettingsSnapshot(
             dataSourceMode: dataSourceMode,
@@ -251,7 +283,8 @@ final class AppSettings {
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
             menuBarScale: menuBarScale,
             historyRange: historyRange,
-            customHistoryDays: customHistoryDays
+            customHistoryDays: customHistoryDays,
+            graphMetrics: graphMetrics
         )
     }
 
@@ -267,5 +300,6 @@ final class AppSettings {
         menuBarScale = snapshot.menuBarScale
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
+        graphMetrics = snapshot.graphMetrics
     }
 }

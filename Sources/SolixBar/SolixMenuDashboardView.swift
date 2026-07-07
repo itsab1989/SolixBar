@@ -49,7 +49,7 @@ final class SolixMenuDashboardView: NSView {
         let status = badge(snapshot.status ?? "Online", color: statusColor)
 
         let battery = primaryMetricPanel("Akku", snapshot.batteryPercent.map { "\($0) %" }, "battery.100percent", batteryColor)
-        let solar = primaryMetricPanel("Solar", snapshot.solarWatts.map { "\($0) W" }, "sun.max.fill", .systemYellow)
+        let solar = primaryMetricPanel("Solar", snapshot.solarWatts.map { "\($0) W" }, "sun.max.fill", solarColor)
 
         let primaryRow = NSStackView(views: [battery, solar])
         primaryRow.orientation = .horizontal
@@ -116,8 +116,8 @@ final class SolixMenuDashboardView: NSView {
         panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
         panel.layer?.cornerRadius = 14
-        panel.baseColor = panelColor
-        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.08 : 0.04).blended(withFraction: 0.94, of: panelColor) ?? panelColor
+        panel.baseColor = panelBackground(for: color, strength: 0.18)
+        panel.highlightColor = panelBackground(for: color, strength: 0.28)
         panel.layer?.borderWidth = 1
         panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
 
@@ -157,8 +157,8 @@ final class SolixMenuDashboardView: NSView {
     private func compactMetricRow(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor) -> NSView {
         let row = AnimatedPanelView()
         row.toolTip = tooltip(for: title, value: value)
-        row.baseColor = panelColor
-        row.highlightColor = color.withAlphaComponent(isDarkMode ? 0.06 : 0.03).blended(withFraction: 0.96, of: panelColor) ?? panelColor
+        row.baseColor = panelBackground(for: color, strength: 0.14)
+        row.highlightColor = panelBackground(for: color, strength: 0.22)
         row.layer?.cornerRadius = 10
         let icon = iconPlate(symbol: symbol, color: color, size: 30, pointSize: 17)
         let titleLabel = NSTextField(labelWithString: title)
@@ -320,13 +320,23 @@ final class SolixMenuDashboardView: NSView {
         return .systemGreen
     }
 
+    private var solarColor: NSColor {
+        NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
+    }
+
     private var gridColor: NSColor {
         guard let watts = snapshot.gridWatts else { return .systemGray }
-        return watts > 0 ? .systemOrange : .systemGreen
+        return watts > 0 ? .systemBlue : .systemTeal
     }
 
     private var batteryFlowColor: NSColor {
         guard let watts = snapshot.batteryWatts else { return .systemGray }
         return watts >= 0 ? .systemGreen : .systemOrange
+    }
+
+    private func panelBackground(for color: NSColor, strength: CGFloat) -> NSColor {
+        let adjustedStrength = isDarkMode ? strength * 0.8 : strength
+        return color.withAlphaComponent(adjustedStrength)
+            .blended(withFraction: isDarkMode ? 0.72 : 0.80, of: panelColor) ?? panelColor
     }
 }

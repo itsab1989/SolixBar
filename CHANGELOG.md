@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added graph controls to show or hide battery, solar, and grid import lines.
+- Added the same graph controls to the detached large graph window.
+- Strengthened metric panel background colors while keeping each metric's color identity.
+- Changed grid import icon color to blue/teal for clearer distinction.
+
 ## 0.1.1 - 2026-07-07
 
 - Added clearer screenshots to the GitHub homepage and README.

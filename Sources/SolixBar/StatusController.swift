@@ -266,7 +266,7 @@ final class StatusController: NSObject {
         case .battery:
             batteryColor(snapshot.batteryPercent)
         case .solar:
-            .systemYellow
+            NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
         case .home:
             .systemBlue
         case .grid:
@@ -298,7 +298,7 @@ final class StatusController: NSObject {
 
     private func gridColor(_ watts: Int?) -> NSColor {
         guard let watts else { return .systemGray }
-        return watts > 0 ? .systemOrange : .systemGreen
+        return watts > 0 ? .systemBlue : .systemTeal
     }
 
     private func batteryFlowSymbol(_ watts: Int?) -> String {

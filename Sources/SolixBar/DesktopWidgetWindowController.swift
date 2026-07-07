@@ -76,7 +76,7 @@ final class DesktopWidgetView: NSView {
             title: "Solar",
             value: snapshot?.solarWatts.map { "\($0) W" } ?? "-",
             symbol: "sun.max.fill",
-            color: .systemYellow
+            color: solarColor
         )
 
         let grid = NSGridView(views: [
@@ -92,7 +92,12 @@ final class DesktopWidgetView: NSView {
         grid.column(at: 0).width = 166
         grid.column(at: 1).width = 166
 
-        let graph = HistoryGraphView(samples: samples, rangeTitle: AppSettings.shared.historyRange.title, size: NSSize(width: 342, height: 150))
+        let graph = HistoryGraphView(
+            samples: samples,
+            rangeTitle: AppSettings.shared.historyRange.title,
+            visibleMetrics: AppSettings.shared.graphMetrics,
+            size: NSSize(width: 342, height: 150)
+        )
 
         for view in [title, subtitle, statusPill, battery, solar, grid, graph] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -146,8 +151,8 @@ final class DesktopWidgetView: NSView {
         panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
         panel.layer?.cornerRadius = 12
-        panel.baseColor = panelBackground
-        panel.highlightColor = color.withAlphaComponent(isDarkMode ? 0.07 : 0.035).blended(withFraction: 0.95, of: panelBackground) ?? panelBackground
+        panel.baseColor = metricBackground(for: color, strength: 0.16)
+        panel.highlightColor = metricBackground(for: color, strength: 0.25)
         panel.layer?.borderWidth = 1
         panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
 
@@ -284,13 +289,23 @@ final class DesktopWidgetView: NSView {
         snapshot?.status?.localizedCaseInsensitiveContains("offline") == true ? .systemRed : .systemGreen
     }
 
+    private var solarColor: NSColor {
+        NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
+    }
+
     private func gridColor() -> NSColor {
         guard let watts = snapshot?.gridWatts else { return .systemGray }
-        return watts > 0 ? .systemOrange : .systemGreen
+        return watts > 0 ? .systemBlue : .systemTeal
     }
 
     private func batteryFlowColor() -> NSColor {
         guard let watts = snapshot?.batteryWatts else { return .systemGray }
         return watts >= 0 ? .systemGreen : .systemOrange
+    }
+
+    private func metricBackground(for color: NSColor, strength: CGFloat) -> NSColor {
+        let adjustedStrength = isDarkMode ? strength * 0.8 : strength
+        return color.withAlphaComponent(adjustedStrength)
+            .blended(withFraction: isDarkMode ? 0.72 : 0.80, of: panelBackground) ?? panelBackground
     }
 }

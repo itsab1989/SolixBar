@@ -22,7 +22,8 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 - Dropdown dashboard with battery, solar, home consumption, grid import, battery flow, daily yield, total yield, and status.
 - Animated history graph for battery, solar, and grid import.
 - Graph ranges: current, 24 hours, 7 days, 30 days, and custom.
-- Enlarged graph view on click.
+- Configurable graph lines for battery, solar, and grid import.
+- Enlarged graph view on click with its own graph controls.
 - Floating desktop widget window.
 - Short tooltips for settings and dashboard fields.
 
