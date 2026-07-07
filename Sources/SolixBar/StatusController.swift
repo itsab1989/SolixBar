@@ -62,7 +62,7 @@ final class StatusController: NSObject {
         }
 
         let battery = snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
-        if settings.showMenuBarMetricSymbols || settings.showEnergyFlowArrows {
+        if settings.showMenuBarMetricSymbols || settings.showEnergyFlowArrows || settings.barMetrics.contains(.flow) {
             setStatusAttributedTitle(barAttributedText(for: snapshot))
         } else {
             let parts = settings.barMetrics.map { metric in
@@ -260,6 +260,8 @@ final class StatusController: NSObject {
             batterySymbol(snapshot.batteryPercent)
         case .batteryFlow:
             batteryFlowSymbol(snapshot.batteryWatts)
+        case .flow:
+            metric.symbolName
         default:
             metric.symbolName
         }
@@ -277,6 +279,8 @@ final class StatusController: NSObject {
             gridColor(snapshot.gridWatts)
         case .batteryFlow:
             batteryFlowColor(snapshot.batteryWatts)
+        case .flow:
+            .systemGreen
         case .today:
             .systemGreen
         case .total:
@@ -302,7 +306,9 @@ final class StatusController: NSObject {
 
     private func gridColor(_ watts: Int?) -> NSColor {
         guard let watts else { return .systemGray }
-        return watts > 0 ? .systemBlue : .systemTeal
+        if watts > 0 { return .systemRed }
+        if watts < 0 { return .systemGreen }
+        return .systemGray
     }
 
     private var solarColor: NSColor {
@@ -311,12 +317,14 @@ final class StatusController: NSObject {
 
     private func batteryFlowSymbol(_ watts: Int?) -> String {
         guard let watts else { return "bolt.fill" }
-        return watts >= 0 ? "bolt.fill" : "arrow.down.circle.fill"
+        return watts >= 0 ? "arrow.down.circle.fill" : "arrow.up.circle.fill"
     }
 
     private func batteryFlowColor(_ watts: Int?) -> NSColor {
         guard let watts else { return .systemGray }
-        return watts >= 0 ? .systemGreen : .systemOrange
+        if watts > 0 { return .systemGreen }
+        if watts < 0 { return .systemRed }
+        return .systemGray
     }
 
     private func formatSignedWatts(_ value: Int?) -> String? {
@@ -336,6 +344,8 @@ final class StatusController: NSObject {
             formatBarMetric(metric, value: formatSignedWatts(snapshot.gridWatts) ?? "--W")
         case .batteryFlow:
             formatBarMetric(metric, value: formatSignedWatts(snapshot.batteryWatts) ?? "--W")
+        case .flow:
+            settings.showMetricLabels ? "\(metric.shortTitle)" : "Flow"
         case .today:
             formatBarMetric(metric, value: snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh")
         case .total:
@@ -356,6 +366,10 @@ final class StatusController: NSObject {
             if index > 0 {
                 result.append(textAttachment(separator()))
             }
+            if metric == .flow {
+                appendFlowField(to: result, snapshot: snapshot)
+                continue
+            }
             if settings.showEnergyFlowArrows,
                let flow = energyFlowArrow(for: metric, snapshot: snapshot),
                let image = coloredSymbol(flow.symbol, color: flow.color, accessibilityDescription: flow.description) {
@@ -367,9 +381,33 @@ final class StatusController: NSObject {
                 result.append(imageAttachment(image))
                 result.append(textAttachment(" "))
             }
-            result.append(textAttachment(barText(for: metric, snapshot: snapshot)))
+            result.append(textAttachment(barText(for: metric, snapshot: snapshot), color: valueColor(for: metric, snapshot: snapshot)))
         }
         return result
+    }
+
+    private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot) {
+        if settings.showMetricLabels {
+            result.append(textAttachment("Flow ", color: .secondaryLabelColor))
+        }
+
+        let flows: [BarMetric] = [.solar, .batteryFlow, .grid]
+        var didAppend = false
+        for metric in flows {
+            guard let flow = energyFlowArrow(for: metric, snapshot: snapshot),
+                  let image = coloredSymbol(flow.symbol, color: flow.color, accessibilityDescription: flow.description) else {
+                continue
+            }
+            if didAppend {
+                result.append(textAttachment(" "))
+            }
+            result.append(imageAttachment(image))
+            didAppend = true
+        }
+
+        if !didAppend {
+            result.append(textAttachment("-", color: .secondaryLabelColor))
+        }
     }
 
     private func energyFlowArrow(for metric: BarMetric, snapshot: SolixSnapshot) -> (symbol: String, color: NSColor, description: String)? {
@@ -377,24 +415,24 @@ final class StatusController: NSObject {
         case .solar:
             guard let watts = snapshot.solarWatts else { return nil }
             return watts > 0
-                ? ("arrow.down.circle.fill", solarColor, "Solar erzeugt Energie")
+                ? ("arrow.down.circle.fill", productionColor(watts), "Solar erzeugt Energie")
                 : ("minus.circle.fill", .systemGray, "Keine Solarleistung")
         case .grid:
             guard let watts = snapshot.gridWatts else { return nil }
             if watts > 0 {
-                return ("arrow.up.circle.fill", .systemRed, "Strom wird aus dem Netz bezogen")
+                return ("arrow.up.circle.fill", consumptionColor(watts), "Strom wird aus dem Netz bezogen")
             }
             if watts < 0 {
-                return ("arrow.down.circle.fill", .systemGreen, "Strom wird ins Netz eingespeist")
+                return ("arrow.down.circle.fill", storageColor(abs(watts)), "Strom wird ins Netz eingespeist")
             }
             return ("minus.circle.fill", .systemGray, "Kein Netzfluss")
         case .batteryFlow:
             guard let watts = snapshot.batteryWatts else { return nil }
             if watts > 0 {
-                return ("arrow.down.circle.fill", .systemGreen, "Akku gibt Strom ab")
+                return ("arrow.down.circle.fill", storageColor(watts), "Akku wird geladen")
             }
             if watts < 0 {
-                return ("arrow.up.circle.fill", .systemOrange, "Akku wird geladen")
+                return ("arrow.up.circle.fill", consumptionColor(abs(watts)), "Akku gibt Strom ab")
             }
             return ("minus.circle.fill", .systemGray, "Kein Akku-Fluss")
         default:
@@ -411,13 +449,72 @@ final class StatusController: NSObject {
         return NSAttributedString(attachment: attachment)
     }
 
-    private func textAttachment(_ string: String) -> NSAttributedString {
+    private func textAttachment(_ string: String, color: NSColor = .labelColor) -> NSAttributedString {
         NSAttributedString(
             string: string,
             attributes: [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * settings.menuBarScale), weight: .medium),
-                .foregroundColor: NSColor.labelColor
+                .foregroundColor: color
             ]
+        )
+    }
+
+    private func valueColor(for metric: BarMetric, snapshot: SolixSnapshot) -> NSColor {
+        switch metric {
+        case .solar:
+            return snapshot.solarWatts.map(productionColor) ?? .secondaryLabelColor
+        case .home:
+            return snapshot.homeWatts.map(consumptionColor) ?? .secondaryLabelColor
+        case .grid:
+            guard let watts = snapshot.gridWatts else { return .secondaryLabelColor }
+            if watts > 0 { return consumptionColor(watts) }
+            if watts < 0 { return storageColor(abs(watts)) }
+            return .secondaryLabelColor
+        case .batteryFlow:
+            guard let watts = snapshot.batteryWatts else { return .secondaryLabelColor }
+            if watts > 0 { return storageColor(watts) }
+            if watts < 0 { return consumptionColor(abs(watts)) }
+            return .secondaryLabelColor
+        default:
+            return .labelColor
+        }
+    }
+
+    private func productionColor(_ watts: Int) -> NSColor {
+        if watts <= 0 { return .secondaryLabelColor }
+        if watts < 250 { return .systemYellow }
+        return storageColor(watts)
+    }
+
+    private func storageColor(_ watts: Int) -> NSColor {
+        let fraction = min(1, max(0, Double(watts) / 2000.0))
+        return interpolateColor(
+            from: NSColor(calibratedRed: 0.95, green: 0.72, blue: 0.16, alpha: 1),
+            to: NSColor(calibratedRed: 0.18, green: 0.76, blue: 0.36, alpha: 1),
+            fraction: fraction
+        )
+    }
+
+    private func consumptionColor(_ watts: Int) -> NSColor {
+        let fraction = min(1, max(0, Double(watts) / 2000.0))
+        return interpolateColor(
+            from: NSColor(calibratedRed: 0.95, green: 0.72, blue: 0.16, alpha: 1),
+            to: NSColor(calibratedRed: 0.94, green: 0.20, blue: 0.22, alpha: 1),
+            fraction: fraction
+        )
+    }
+
+    private func interpolateColor(from start: NSColor, to end: NSColor, fraction: Double) -> NSColor {
+        guard let start = start.usingColorSpace(.deviceRGB),
+              let end = end.usingColorSpace(.deviceRGB) else {
+            return fraction > 0.5 ? end : start
+        }
+        let t = CGFloat(fraction)
+        return NSColor(
+            calibratedRed: start.redComponent + (end.redComponent - start.redComponent) * t,
+            green: start.greenComponent + (end.greenComponent - start.greenComponent) * t,
+            blue: start.blueComponent + (end.blueComponent - start.blueComponent) * t,
+            alpha: 1
         )
     }
 

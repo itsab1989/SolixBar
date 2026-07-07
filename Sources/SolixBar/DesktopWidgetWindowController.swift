@@ -16,10 +16,13 @@ final class DesktopWidgetWindowController: NSWindowController {
         )
         window.title = "SOLIX Widget"
         window.minSize = NSSize(width: 360, height: 460)
+        window.contentMinSize = NSSize(width: 360, height: 460)
+        window.maxSize = NSSize(width: 920, height: 1160)
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.setFrameAutosaveName("SolixBarDesktopWidget")
         window.center()
         super.init(window: window)
         rebuild()
@@ -96,11 +99,13 @@ final class DesktopWidgetView: NSView {
         let graph = HistoryGraphView(
             samples: samples,
             rangeTitle: AppSettings.shared.historyRange.title,
+            rangeDuration: AppSettings.shared.historyDuration,
             visibleMetrics: AppSettings.shared.graphMetrics,
             size: NSSize(width: 342, height: 150)
         )
+        let resizeHandle = WidgetResizeHandleView()
 
-        for view in [title, subtitle, statusPill, battery, solar, grid, graph] {
+        for view in [title, subtitle, statusPill, battery, solar, grid, graph, resizeHandle] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -135,7 +140,12 @@ final class DesktopWidgetView: NSView {
             graph.topAnchor.constraint(equalTo: grid.bottomAnchor, constant: 16),
             graph.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
             graph.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
-            graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -24)
+            graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -28),
+
+            resizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            resizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+            resizeHandle.widthAnchor.constraint(equalToConstant: 24),
+            resizeHandle.heightAnchor.constraint(equalToConstant: 24)
         ])
     }
 
@@ -296,17 +306,64 @@ final class DesktopWidgetView: NSView {
 
     private func gridColor() -> NSColor {
         guard let watts = snapshot?.gridWatts else { return .systemGray }
-        return watts > 0 ? .systemBlue : .systemTeal
+        if watts > 0 { return .systemRed }
+        if watts < 0 { return .systemGreen }
+        return .systemGray
     }
 
     private func batteryFlowColor() -> NSColor {
         guard let watts = snapshot?.batteryWatts else { return .systemGray }
-        return watts >= 0 ? .systemGreen : .systemOrange
+        if watts > 0 { return .systemGreen }
+        if watts < 0 { return .systemRed }
+        return .systemGray
     }
 
     private func metricBackground(for color: NSColor, strength: CGFloat) -> NSColor {
         let adjustedStrength = isDarkMode ? strength * 0.8 : strength
         return color.withAlphaComponent(adjustedStrength)
             .blended(withFraction: isDarkMode ? 0.72 : 0.80, of: panelBackground) ?? panelBackground
+    }
+}
+
+final class WidgetResizeHandleView: NSView {
+    private var startMouseLocation = NSPoint.zero
+    private var startFrame = NSRect.zero
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .resizeLeftRight)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        startMouseLocation = NSEvent.mouseLocation
+        startFrame = window?.frame ?? .zero
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let window else { return }
+        let current = NSEvent.mouseLocation
+        let minSize = window.minSize
+        let deltaX = current.x - startMouseLocation.x
+        let deltaY = current.y - startMouseLocation.y
+
+        var frame = startFrame
+        frame.size.width = max(minSize.width, startFrame.width + deltaX)
+        frame.size.height = max(minSize.height, startFrame.height - deltaY)
+        frame.origin.y = startFrame.maxY - frame.height
+        window.setFrame(frame, display: true)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        let color = NSColor.secondaryLabelColor.withAlphaComponent(0.65)
+        color.setStroke()
+        for offset in stride(from: CGFloat(6), through: CGFloat(16), by: 5) {
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: bounds.maxX - offset, y: bounds.minY + 4))
+            path.line(to: NSPoint(x: bounds.maxX - 4, y: bounds.minY + offset))
+            path.lineWidth = 1.2
+            path.stroke()
+        }
     }
 }

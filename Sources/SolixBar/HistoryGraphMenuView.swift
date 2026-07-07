@@ -114,6 +114,7 @@ final class HistoryGraphMenuView: NSView {
         let graph = HistoryGraphView(
             samples: graphProvider(),
             rangeTitle: settings.historyRange.title,
+            rangeDuration: settings.historyDuration,
             visibleMetrics: settings.graphMetrics,
             size: NSSize(width: 370, height: 191)
         )

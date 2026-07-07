@@ -4,10 +4,10 @@
   <rect width="980" height="520" rx="24" fill="#ffffff"/>
   <text x="46" y="70" fill="#17211d" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900">Verlauf</text>
   <g font-family="Inter, Arial, sans-serif" font-size="18" font-weight="750">
-    <rect x="624" y="42" width="70" height="36" rx="10" fill="#111815"/>
-    <text x="643" y="66" fill="#ffffff">24h</text>
-    <rect x="704" y="42" width="58" height="36" rx="10" fill="#eef4ef"/>
-    <text x="723" y="66" fill="#5b6962">7T</text>
+    <rect x="624" y="42" width="70" height="36" rx="10" fill="#eef4ef"/>
+    <text x="643" y="66" fill="#5b6962">24h</text>
+    <rect x="704" y="42" width="58" height="36" rx="10" fill="#111815"/>
+    <text x="723" y="66" fill="#ffffff">7T</text>
     <rect x="772" y="42" width="72" height="36" rx="10" fill="#eef4ef"/>
     <text x="791" y="66" fill="#5b6962">30T</text>
     <rect x="854" y="42" width="82" height="36" rx="10" fill="#eef4ef"/>
@@ -27,9 +27,18 @@
     <text x="904" y="410">0 W</text>
     <text x="904" y="270">1000 W</text>
     <text x="904" y="130">2000 W</text>
-    <text x="92" y="456">00:00</text>
-    <text x="412" y="456">12:00</text>
+    <text x="86" y="456">01.07</text>
+    <text x="292" y="456">03.07</text>
+    <text x="494" y="456">05.07</text>
+    <text x="696" y="456">07.07</text>
     <text x="818" y="456">Jetzt</text>
+  </g>
+  <g stroke="#aebbb4" stroke-width="2">
+    <line x1="92" y1="404" x2="92" y2="414"/>
+    <line x1="294" y1="404" x2="294" y2="414"/>
+    <line x1="496" y1="404" x2="496" y2="414"/>
+    <line x1="698" y1="404" x2="698" y2="414"/>
+    <line x1="900" y1="404" x2="900" y2="414"/>
   </g>
   <path d="M92 360 C168 350 208 320 278 326 C362 333 414 262 500 282 C584 302 646 220 718 246 C794 272 844 212 900 224" fill="none" stroke="#2c8f63" stroke-width="8" stroke-linecap="round"/>
   <path d="M92 388 C151 330 217 246 292 204 C360 166 420 132 502 138 C586 144 650 185 720 230 C790 276 846 334 900 378" fill="none" stroke="#e4a72f" stroke-width="8" stroke-linecap="round"/>

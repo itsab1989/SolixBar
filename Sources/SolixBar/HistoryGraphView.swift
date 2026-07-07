@@ -3,6 +3,7 @@ import AppKit
 final class HistoryGraphView: NSView {
     private let samples: [SolixHistorySample]
     private let rangeTitle: String
+    private let rangeDuration: TimeInterval
     private let visibleMetrics: [GraphMetric]
     private var animationProgress: CGFloat = 0
     private var animationTimer: Timer?
@@ -16,11 +17,13 @@ final class HistoryGraphView: NSView {
     init(
         samples: [SolixHistorySample],
         rangeTitle: String,
+        rangeDuration: TimeInterval = AppSettings.shared.historyDuration,
         visibleMetrics: [GraphMetric] = AppSettings.shared.graphMetrics,
         size: NSSize = NSSize(width: 320, height: 170)
     ) {
         self.samples = samples.sorted { $0.date < $1.date }
         self.rangeTitle = rangeTitle
+        self.rangeDuration = rangeDuration
         self.visibleMetrics = visibleMetrics.isEmpty ? GraphMetric.allCases : visibleMetrics
         super.init(frame: NSRect(origin: .zero, size: size))
         wantsLayer = true
@@ -153,15 +156,29 @@ final class HistoryGraphView: NSView {
     }
 
     private func drawTimeLabels(in rect: NSRect) {
-        guard let first = samples.first?.date, let last = samples.last?.date else { return }
+        let domain = timeDomain()
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "de_DE")
-        formatter.dateFormat = last.timeIntervalSince(first) <= 30 * 60 * 60 ? "HH:mm" : "dd.MM"
+        formatter.dateFormat = timeLabelFormat(for: domain.end.timeIntervalSince(domain.start))
 
-        drawText(formatter.string(from: first), at: NSPoint(x: rect.minX, y: 17), font: .systemFont(ofSize: 10, weight: .medium), color: .secondaryLabelColor)
-        let lastText = formatter.string(from: last)
-        let width = (lastText as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .medium)]).width
-        drawText(lastText, at: NSPoint(x: rect.maxX - width, y: 17), font: .systemFont(ofSize: 10, weight: .medium), color: .secondaryLabelColor)
+        let tickCount = bounds.width < 430 ? 3 : 5
+        for index in 0..<tickCount {
+            let progress = tickCount == 1 ? 0 : Double(index) / Double(tickCount - 1)
+            let date = domain.start.addingTimeInterval(domain.end.timeIntervalSince(domain.start) * progress)
+            let text = index == tickCount - 1 && domain.end.timeIntervalSinceNow > -75 ? "Jetzt" : formatter.string(from: date)
+            let font = NSFont.systemFont(ofSize: 10, weight: .medium)
+            let width = (text as NSString).size(withAttributes: [.font: font]).width
+            let x = rect.minX + rect.width * CGFloat(progress)
+            let clampedX = min(rect.maxX - width, max(rect.minX, x - width / 2))
+            drawText(text, at: NSPoint(x: clampedX, y: 17), font: font, color: .secondaryLabelColor)
+
+            let tick = NSBezierPath()
+            tick.move(to: NSPoint(x: x, y: rect.minY))
+            tick.line(to: NSPoint(x: x, y: rect.minY - 4))
+            axisColor.setStroke()
+            tick.lineWidth = 1
+            tick.stroke()
+        }
     }
 
     private func batteryPoints(in rect: NSRect) -> [NSPoint] {
@@ -186,19 +203,36 @@ final class HistoryGraphView: NSView {
     }
 
     private func normalizedPoints(in rect: NSRect, value: (SolixHistorySample) -> Double?) -> [NSPoint] {
-        guard let first = samples.first?.date.timeIntervalSince1970,
-              let last = samples.last?.date.timeIntervalSince1970,
-              last > first else {
-            return []
-        }
+        let domain = timeDomain()
+        let first = domain.start.timeIntervalSince1970
+        let last = domain.end.timeIntervalSince1970
+        guard last > first else { return [] }
 
         return samples.compactMap { sample in
             guard let normalized = value(sample) else { return nil }
             let timestamp = sample.date.timeIntervalSince1970
+            guard timestamp >= first, timestamp <= last else { return nil }
             let x = rect.minX + rect.width * CGFloat((timestamp - first) / (last - first))
             let y = rect.minY + rect.height * CGFloat(normalized)
             return NSPoint(x: x, y: y)
         }
+    }
+
+    private func timeDomain() -> (start: Date, end: Date) {
+        let now = Date()
+        let end = max(samples.last?.date ?? now, now)
+        let duration = max(60 * 60, rangeDuration)
+        return (end.addingTimeInterval(-duration), end)
+    }
+
+    private func timeLabelFormat(for duration: TimeInterval) -> String {
+        if duration <= 30 * 60 * 60 {
+            return "HH:mm"
+        }
+        if duration <= 35 * 24 * 60 * 60 {
+            return "dd.MM"
+        }
+        return "MM/yy"
     }
 
     private func drawLine(values points: [NSPoint], color: NSColor, width: CGFloat) {

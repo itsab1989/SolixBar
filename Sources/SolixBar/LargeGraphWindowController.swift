@@ -43,6 +43,7 @@ final class LargeGraphWindowController: NSWindowController {
         let graph = HistoryGraphView(
             samples: graphProvider(),
             rangeTitle: settings.historyRange.title,
+            rangeDuration: settings.historyDuration,
             visibleMetrics: settings.graphMetrics,
             size: NSSize(width: 680, height: 360)
         )

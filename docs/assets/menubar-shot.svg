@@ -7,10 +7,13 @@
   <circle cx="110" cy="87" r="8" fill="#ffbd2e"/>
   <circle cx="138" cy="87" r="8" fill="#28c840"/>
   <g font-family="Inter, Arial, sans-serif" font-weight="800" font-size="24">
-    <text x="397" y="95" fill="#ebfff2">82%</text>
-    <text x="477" y="95" fill="#fff2c8">642 W</text>
-    <text x="581" y="95" fill="#d8e8ff">Netzbezug 86 W</text>
-    <text x="764" y="95" fill="#ffffff">3,7 kWh</text>
+    <text x="322" y="95" fill="#ebfff2">82%</text>
+    <text x="402" y="95" fill="#36c767">642 W</text>
+    <text x="512" y="95" fill="#f16b5f">Netzbezug 86 W</text>
+    <text x="716" y="95" fill="#f1c452">Flow</text>
+    <text x="786" y="95" fill="#36c767">↓</text>
+    <text x="816" y="95" fill="#f1c452">↓</text>
+    <text x="846" y="95" fill="#f16b5f">↑</text>
   </g>
   <g transform="translate(72 154)" font-family="Inter, Arial, sans-serif" font-size="18" fill="#5b6962">
     <circle cx="0" cy="0" r="7" fill="#2c8f63"/>
@@ -19,9 +22,9 @@
     <text x="134" y="6">Solar</text>
     <circle cx="236" cy="0" r="7" fill="#2d71d6"/>
     <text x="254" y="6">Netzbezug</text>
-    <circle cx="404" cy="0" r="7" fill="#111815"/>
-    <text x="422" y="6">Heutiger Ertrag</text>
-    <circle cx="604" cy="0" r="7" fill="#7c3aed"/>
-    <text x="622" y="6">Gesamtertrag</text>
+    <circle cx="404" cy="0" r="7" fill="#36c767"/>
+    <text x="422" y="6">Energiefluss</text>
+    <circle cx="586" cy="0" r="7" fill="#111815"/>
+    <text x="604" y="6">Heutiger Ertrag</text>
   </g>
 </svg>

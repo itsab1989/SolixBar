@@ -12,6 +12,7 @@ enum BarMetric: String, CaseIterable {
     case home
     case grid
     case batteryFlow
+    case flow
     case today
     case total
     case status
@@ -28,6 +29,8 @@ enum BarMetric: String, CaseIterable {
             "Netzbezug"
         case .batteryFlow:
             "Akku-Fluss"
+        case .flow:
+            "Energiefluss"
         case .today:
             "Heutiger Ertrag"
         case .total:
@@ -49,6 +52,8 @@ enum BarMetric: String, CaseIterable {
             "Netz"
         case .batteryFlow:
             "Fluss"
+        case .flow:
+            "Flow"
         case .today:
             "Ertrag"
         case .total:
@@ -70,6 +75,8 @@ enum BarMetric: String, CaseIterable {
             "powerplug.fill"
         case .batteryFlow:
             "bolt.fill"
+        case .flow:
+            "arrow.up.arrow.down.circle.fill"
         case .today:
             "chart.bar.fill"
         case .total:

@@ -274,8 +274,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func buildMetricGrid() -> NSGridView {
         let rows = [
             [BarMetric.battery, .solar, .home],
-            [BarMetric.grid, .batteryFlow, .today],
-            [BarMetric.total, .status]
+            [BarMetric.grid, .batteryFlow, .flow],
+            [BarMetric.today, .total, .status]
         ].map { metrics in
             metrics.map { metric in
                 let button = NSButton(checkboxWithTitle: metric.title, target: self, action: #selector(applyPreview))
@@ -316,6 +316,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             return "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt."
         case .batteryFlow:
             return "Zeigt, ob der Akku gerade lädt oder entlädt."
+        case .flow:
+            return "Zeigt kompakte Pfeile für Solar, Akku und Netzfluss in der Menüleiste."
         case .today:
             return "Zeigt den heutigen Solarertrag in kWh."
         case .total:

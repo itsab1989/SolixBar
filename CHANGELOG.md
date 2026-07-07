@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.4 - 2026-07-07
+
+- Added an optional menu bar energy-flow field with colored up/down arrows for solar, battery, and grid flow.
+- Colored energy-flow values from green through yellow to red depending on storage/export versus consumption/import.
+- Improved graph time axes so 24h, 7-day, 30-day, and custom ranges show matching x-axis ticks.
+- Added a visible resize handle and stronger size persistence to the floating desktop widget.
+- Updated the GitHub homepage screenshots and feature text for the new flow and graph behavior.
+
 ## 0.1.3 - 2026-07-07
 
 - Hid unused command or URL fields in the data source settings depending on the selected mode.
