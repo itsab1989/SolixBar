@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hid unused command or URL fields in the data source settings depending on the selected mode.
+
 ## 0.1.2 - 2026-07-07
 
 - Added graph controls to show or hide battery, solar, and grid import lines.

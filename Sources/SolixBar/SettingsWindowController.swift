@@ -11,6 +11,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let commandField = NSTextField()
     private let urlField = NSTextField()
     private let intervalField = NSTextField()
+    private let commandRow = NSStackView()
+    private let urlRow = NSStackView()
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
@@ -185,21 +187,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func dataSourcePane() -> NSView {
         let container = NSView()
         let title = sectionTitle("Datenquelle")
-        let hint = NSTextField(wrappingLabelWithString: "Der Befehl oder die URL muss ein JSON-Objekt mit Feldern wie batteryPercent, solarWatts, homeWatts und updatedAt liefern. Mindestintervall: 60 Sekunden.")
+        let hint = NSTextField(wrappingLabelWithString: "Die gewählte Datenquelle muss ein JSON-Objekt mit Feldern wie batteryPercent, solarWatts, homeWatts und updatedAt liefern. Mindestintervall: 60 Sekunden.")
         hint.textColor = .secondaryLabelColor
 
-        let grid = NSGridView(views: [
-            [label("Modus"), modePopup],
-            [label("Befehl"), commandField],
-            [label("URL"), urlField],
-            [label("Intervall"), intervalField]
-        ])
-        grid.column(at: 0).xPlacement = .trailing
-        grid.column(at: 1).width = 450
-        grid.rowSpacing = 12
-        grid.columnSpacing = 12
+        let rows = NSStackView()
+        rows.orientation = .vertical
+        rows.spacing = 12
 
-        for view in [title, grid, hint] {
+        rows.addArrangedSubview(formRow(labelText: "Modus", control: modePopup))
+        configure(row: commandRow, labelText: "Befehl", control: commandField)
+        configure(row: urlRow, labelText: "URL", control: urlField)
+        rows.addArrangedSubview(commandRow)
+        rows.addArrangedSubview(urlRow)
+        rows.addArrangedSubview(formRow(labelText: "Intervall", control: intervalField))
+
+        for view in [title, rows, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -208,16 +210,40 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             title.topAnchor.constraint(equalTo: container.topAnchor, constant: 22),
             title.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            grid.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 16),
-            grid.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            grid.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
+            rows.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 16),
+            rows.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            rows.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
 
-            hint.topAnchor.constraint(equalTo: grid.bottomAnchor, constant: 18),
+            hint.topAnchor.constraint(equalTo: rows.bottomAnchor, constant: 18),
             hint.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             hint.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
 
         return container
+    }
+
+    private func formRow(labelText: String, control: NSView) -> NSStackView {
+        let row = NSStackView()
+        configure(row: row, labelText: labelText, control: control)
+        return row
+    }
+
+    private func configure(row: NSStackView, labelText: String, control: NSView) {
+        row.orientation = .horizontal
+        row.spacing = 12
+        row.alignment = .centerY
+
+        let rowLabel = label(labelText)
+        rowLabel.alignment = .right
+        rowLabel.translatesAutoresizingMaskIntoConstraints = false
+        control.translatesAutoresizingMaskIntoConstraints = false
+        row.addArrangedSubview(rowLabel)
+        row.addArrangedSubview(control)
+
+        NSLayoutConstraint.activate([
+            rowLabel.widthAnchor.constraint(equalToConstant: 88),
+            control.widthAnchor.constraint(equalToConstant: 450)
+        ])
     }
 
     private func startupPane() -> NSView {
@@ -341,6 +367,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             metricButtons[metric]?.state = selected.contains(metric) ? .on : .off
         }
         refreshAutostartState()
+        updateDataSourceFieldVisibility()
         isLoading = false
     }
 
@@ -373,6 +400,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
         settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
+        updateDataSourceFieldVisibility()
+    }
+
+    private func updateDataSourceFieldVisibility() {
+        switch modePopup.indexOfSelectedItem {
+        case 1:
+            commandRow.isHidden = false
+            urlRow.isHidden = true
+        case 2:
+            commandRow.isHidden = true
+            urlRow.isHidden = false
+        default:
+            commandRow.isHidden = true
+            urlRow.isHidden = true
+        }
     }
 
     private func restoreOriginalSettings() {
