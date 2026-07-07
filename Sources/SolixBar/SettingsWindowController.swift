@@ -18,7 +18,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
     private let showLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
     private let showMetricSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
-    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Energiefluss-Pfeile anzeigen", target: nil, action: nil)
+    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Pfeile beim Energiefluss anzeigen", target: nil, action: nil)
     private let scaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.6, target: nil, action: nil)
     private let scaleValue = NSTextField(labelWithString: "100 %")
     private var metricButtons: [BarMetric: NSButton] = [:]
@@ -84,7 +84,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
-        showEnergyFlowArrowsButton.toolTip = "Zeigt farbige Pfeile für die Richtung des Energieflusses in der Menüleiste."
+        showEnergyFlowArrowsButton.toolTip = "Schaltet die farbigen Richtungspfeile für das Energiefluss-Feld und einzelne Energie-Werte ein oder aus."
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
 
@@ -317,7 +317,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case .batteryFlow:
             return "Zeigt, ob der Akku gerade lädt oder entlädt."
         case .flow:
-            return "Zeigt kompakte Pfeile für Solar, Akku und Netzfluss in der Menüleiste."
+            return "Zeigt das Energiefluss-Feld in der Menüleiste. Die Pfeile erscheinen, wenn die Pfeil-Option aktiviert ist."
         case .today:
             return "Zeigt den heutigen Solarertrag in kWh."
         case .total:

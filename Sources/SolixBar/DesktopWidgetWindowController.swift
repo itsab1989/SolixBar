@@ -113,6 +113,7 @@ final class DesktopWidgetView: NSView {
         subtitle.toolTip = "Wann die Werte zuletzt aktualisiert wurden."
 
         let statusPill = statusBadge()
+        let scaleControls = widgetScaleControls()
 
         let battery = bigMetric(
             title: "Akku",
@@ -152,7 +153,7 @@ final class DesktopWidgetView: NSView {
         let bottomResizeHandle = WidgetResizeHandleView(zone: .bottom)
         let cornerResizeHandle = WidgetResizeHandleView(zone: .bottomRight)
 
-        for view in [title, subtitle, statusPill, battery, solar, grid, graph, rightResizeHandle, bottomResizeHandle, cornerResizeHandle] {
+        for view in [title, subtitle, statusPill, scaleControls, battery, solar, grid, graph, rightResizeHandle, bottomResizeHandle, cornerResizeHandle] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -169,6 +170,10 @@ final class DesktopWidgetView: NSView {
             subtitle.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 4),
             subtitle.leadingAnchor.constraint(equalTo: title.leadingAnchor),
             subtitle.trailingAnchor.constraint(equalTo: title.trailingAnchor),
+
+            scaleControls.centerYAnchor.constraint(equalTo: subtitle.centerYAnchor),
+            scaleControls.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
+            scaleControls.heightAnchor.constraint(equalToConstant: 26),
 
             battery.topAnchor.constraint(equalTo: subtitle.bottomAnchor, constant: 18),
             battery.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
@@ -204,6 +209,49 @@ final class DesktopWidgetView: NSView {
             cornerResizeHandle.widthAnchor.constraint(equalToConstant: 28),
             cornerResizeHandle.heightAnchor.constraint(equalToConstant: 28)
         ])
+    }
+
+    private func widgetScaleControls() -> NSStackView {
+        let shrink = scaleButton(title: "-", action: #selector(shrinkWidget))
+        shrink.toolTip = "Widget kleiner skalieren."
+
+        let grow = scaleButton(title: "+", action: #selector(growWidget))
+        grow.toolTip = "Widget größer skalieren."
+
+        let stack = NSStackView(views: [shrink, grow])
+        stack.orientation = .horizontal
+        stack.spacing = 6
+        return stack
+    }
+
+    private func scaleButton(title: String, action: Selector) -> NSButton {
+        let button = NSButton(title: title, target: self, action: action)
+        button.bezelStyle = .rounded
+        button.font = .systemFont(ofSize: 12, weight: .bold)
+        button.widthAnchor.constraint(equalToConstant: 30).isActive = true
+        return button
+    }
+
+    @objc private func growWidget() {
+        resizeWidget(deltaWidth: 90, deltaHeight: 120)
+    }
+
+    @objc private func shrinkWidget() {
+        resizeWidget(deltaWidth: -90, deltaHeight: -120)
+    }
+
+    private func resizeWidget(deltaWidth: CGFloat, deltaHeight: CGFloat) {
+        guard let window else { return }
+        let minSize = window.minSize
+        let maxSize = window.maxSize
+        var frame = window.frame
+        let newWidth = min(maxSize.width, max(minSize.width, frame.width + deltaWidth))
+        let newHeight = min(maxSize.height, max(minSize.height, frame.height + deltaHeight))
+        let heightDelta = newHeight - frame.height
+        frame.size.width = newWidth
+        frame.size.height = newHeight
+        frame.origin.y -= heightDelta
+        window.setFrame(frame, display: true, animate: true)
     }
 
     fileprivate static func resize(

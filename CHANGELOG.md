@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.8 - 2026-07-07
+
+- Added explicit plus and minus controls inside the desktop widget for reliable scaling.
+- Clarified the energy-flow settings: the energy-flow field is separate from the option that shows colored direction arrows.
+- Moved graph legend labels below the title to avoid overlap with the selected time range.
+- Increased x-axis tick density for 24-hour, 7-day, 30-day, and custom graph ranges.
+
 ## 0.1.7 - 2026-07-07
 
 - Replaced the app icon with the new energy-flow battery design.

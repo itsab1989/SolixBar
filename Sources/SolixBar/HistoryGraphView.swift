@@ -52,7 +52,7 @@ final class HistoryGraphView: NSView {
         drawHeader()
         drawLegend()
 
-        let plot = NSRect(x: 44, y: 40, width: bounds.width - 92, height: bounds.height - 82)
+        let plot = NSRect(x: 44, y: 44, width: bounds.width - 92, height: bounds.height - 112)
         let maxPower = maxPowerValue()
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
@@ -232,13 +232,13 @@ final class HistoryGraphView: NSView {
         case .current:
             count = bounds.width < 430 ? 4 : 5
         case .day:
-            count = bounds.width < 430 ? 4 : 5
+            count = bounds.width < 430 ? 5 : 7
         case .week:
-            count = bounds.width < 430 ? 4 : 5
+            count = 8
         case .month:
-            count = bounds.width < 430 ? 4 : 6
+            count = bounds.width < 430 ? 7 : 11
         case .custom:
-            count = bounds.width < 430 ? 4 : 5
+            count = rangeDuration <= 10 * 24 * 60 * 60 ? 8 : (bounds.width < 430 ? 7 : 11)
         }
 
         return (0..<count).map { index in
@@ -256,7 +256,7 @@ final class HistoryGraphView: NSView {
         case .current, .day:
             formatter.dateFormat = "HH:mm"
         case .week:
-            formatter.dateFormat = "E dd.MM"
+            formatter.dateFormat = "dd.MM"
         case .month:
             formatter.dateFormat = "dd.MM"
         case .custom:
@@ -301,8 +301,8 @@ final class HistoryGraphView: NSView {
     }
 
     private func drawLegend() {
-        let y = bounds.maxY - 25
-        var x = max(120, bounds.width - CGFloat(visibleMetrics.count * 82))
+        let y = bounds.maxY - 50
+        var x = max(18, min(bounds.width - CGFloat(visibleMetrics.count * 82), 160))
         if visibleMetrics.contains(.battery) {
             drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y, width: 58)
             x += 66

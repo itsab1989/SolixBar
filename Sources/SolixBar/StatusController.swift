@@ -390,6 +390,11 @@ final class StatusController: NSObject {
             result.append(textAttachment("Flow ", color: .secondaryLabelColor))
         }
 
+        guard settings.showEnergyFlowArrows else {
+            result.append(textAttachment("aus", color: .secondaryLabelColor))
+            return
+        }
+
         let flows: [BarMetric] = [.solar, .batteryFlow, .grid]
         var didAppend = false
         for metric in flows {
