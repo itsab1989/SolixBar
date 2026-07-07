@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-07-07
+
 - Added graph controls to show or hide battery, solar, and grid import lines.
 - Added the same graph controls to the detached large graph window.
 - Added optional colored energy-flow arrows for the menu bar.
