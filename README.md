@@ -90,7 +90,11 @@ Recommended local command for SolixBar:
 /Users/holger/Documents/Codex/2026-07-06/bi/scripts/run_solix_snapshot.sh
 ```
 
-Create a local ignored credentials file at `work/solixbar.env`:
+The app can create the local ignored credentials file for you. Open
+`Einstellungen` -> `Datenquelle`, enter email, password, and country under
+`SOLIX Login`, then press `Speichern`.
+
+SolixBar writes this local file:
 
 ```bash
 ANKER_SOLIX_USER='you@example.com'
@@ -98,7 +102,7 @@ ANKER_SOLIX_PASSWORD='your-password'
 ANKER_SOLIX_COUNTRY='DE'
 ```
 
-Example command for SolixBar after replacing credentials:
+Manual example command after replacing credentials:
 
 ```bash
 ANKER_SOLIX_USER="you@example.com" \
@@ -108,7 +112,7 @@ ANKER_SOLIX_COUNTRY="DE" \
 scripts/solix_snapshot.py
 ```
 
-Put the command into SolixBar settings under `Lokaler JSON-Befehl`.
+Put the command into SolixBar settings under `Lokaler JSON-Befehl` only if you do not use the built-in SOLIX login fields.
 
 For security, avoid committing credentials. A future improvement should store credentials in the macOS Keychain.
 

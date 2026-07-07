@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.9 - 2026-07-07
+
+- Added SOLIX login fields for email, password, and country directly to the data source settings.
+- Saving SOLIX login fields now writes the local ignored `work/solixbar.env` file automatically.
+- Saving SOLIX login fields also switches the app to the prepared local JSON helper command.
+
 ## 0.1.8 - 2026-07-07
 
 - Added explicit plus and minus controls inside the desktop widget for reliable scaling.
