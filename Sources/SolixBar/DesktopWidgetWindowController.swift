@@ -10,7 +10,7 @@ final class DesktopWidgetWindowController: NSWindowController {
         self.graphProvider = graphProvider
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 430, height: 680),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -20,7 +20,6 @@ final class DesktopWidgetWindowController: NSWindowController {
         window.maxSize = NSSize(width: 920, height: 1160)
         window.contentResizeIncrements = NSSize(width: 1, height: 1)
         window.showsResizeIndicator = true
-        window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -49,8 +48,6 @@ final class DesktopWidgetWindowController: NSWindowController {
 final class DesktopWidgetView: NSView {
     private let snapshot: SolixSnapshot?
     private let samples: [SolixHistorySample]
-    private let sizeSlider = NSSlider(value: 1.0, minValue: 0.85, maxValue: 1.8, target: nil, action: nil)
-    private let sizeValue = NSTextField(labelWithString: "100 %")
     private var activeResizeZone: WidgetResizeZone?
     private var resizeStartMouseLocation = NSPoint.zero
     private var resizeStartFrame = NSRect.zero
@@ -116,9 +113,6 @@ final class DesktopWidgetView: NSView {
         subtitle.toolTip = "Wann die Werte zuletzt aktualisiert wurden."
 
         let statusPill = statusBadge()
-        let scaleControls = widgetScaleControls()
-        let sizeControls = widgetSizeSlider()
-
         let battery = bigMetric(
             title: "Akku",
             value: snapshot?.batteryPercent.map { "\($0) %" } ?? "-",
@@ -157,7 +151,7 @@ final class DesktopWidgetView: NSView {
         let bottomResizeHandle = WidgetResizeHandleView(zone: .bottom)
         let cornerResizeHandle = WidgetResizeHandleView(zone: .bottomRight)
 
-        for view in [title, subtitle, statusPill, scaleControls, sizeControls, battery, solar, grid, graph, rightResizeHandle, bottomResizeHandle, cornerResizeHandle] {
+        for view in [title, subtitle, statusPill, battery, solar, grid, graph, rightResizeHandle, bottomResizeHandle, cornerResizeHandle] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -175,16 +169,7 @@ final class DesktopWidgetView: NSView {
             subtitle.leadingAnchor.constraint(equalTo: title.leadingAnchor),
             subtitle.trailingAnchor.constraint(equalTo: title.trailingAnchor),
 
-            scaleControls.centerYAnchor.constraint(equalTo: subtitle.centerYAnchor),
-            scaleControls.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
-            scaleControls.heightAnchor.constraint(equalToConstant: 26),
-
-            sizeControls.topAnchor.constraint(equalTo: subtitle.bottomAnchor, constant: 12),
-            sizeControls.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
-            sizeControls.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
-            sizeControls.heightAnchor.constraint(equalToConstant: 28),
-
-            battery.topAnchor.constraint(equalTo: sizeControls.bottomAnchor, constant: 14),
+            battery.topAnchor.constraint(equalTo: subtitle.bottomAnchor, constant: 18),
             battery.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
             battery.trailingAnchor.constraint(equalTo: centerXAnchor, constant: -6),
             battery.heightAnchor.constraint(equalToConstant: 92),
@@ -218,90 +203,6 @@ final class DesktopWidgetView: NSView {
             cornerResizeHandle.widthAnchor.constraint(equalToConstant: 28),
             cornerResizeHandle.heightAnchor.constraint(equalToConstant: 28)
         ])
-    }
-
-    private func widgetScaleControls() -> NSStackView {
-        let shrink = scaleButton(title: "-", action: #selector(shrinkWidget))
-        shrink.toolTip = "Widget kleiner skalieren."
-
-        let grow = scaleButton(title: "+", action: #selector(growWidget))
-        grow.toolTip = "Widget größer skalieren."
-
-        let stack = NSStackView(views: [shrink, grow])
-        stack.orientation = .horizontal
-        stack.spacing = 6
-        return stack
-    }
-
-    private func widgetSizeSlider() -> NSStackView {
-        let label = NSTextField(labelWithString: "Widget-Größe")
-        label.font = .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = .secondaryLabelColor
-        label.toolTip = "Skaliert das Widget wie ein Fenster. Alternativ kannst du rechts oder unten ziehen."
-
-        sizeSlider.target = self
-        sizeSlider.action = #selector(changeWidgetSize)
-        sizeSlider.toolTip = "Vergrößert oder verkleinert das Widget."
-        sizeValue.alignment = .right
-        sizeValue.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
-        sizeValue.textColor = .secondaryLabelColor
-        sizeValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
-
-        if let window {
-            let ratio = window.frame.width / 430
-            sizeSlider.doubleValue = min(1.8, max(0.85, Double(ratio)))
-            sizeValue.stringValue = "\(Int(round(sizeSlider.doubleValue * 100))) %"
-        }
-
-        let stack = NSStackView(views: [label, sizeSlider, sizeValue])
-        stack.orientation = .horizontal
-        stack.spacing = 10
-        return stack
-    }
-
-    private func scaleButton(title: String, action: Selector) -> NSButton {
-        let button = NSButton(title: title, target: self, action: action)
-        button.bezelStyle = .rounded
-        button.font = .systemFont(ofSize: 12, weight: .bold)
-        button.widthAnchor.constraint(equalToConstant: 30).isActive = true
-        return button
-    }
-
-    @objc private func growWidget() {
-        resizeWidget(deltaWidth: 90, deltaHeight: 120)
-    }
-
-    @objc private func shrinkWidget() {
-        resizeWidget(deltaWidth: -90, deltaHeight: -120)
-    }
-
-    private func resizeWidget(deltaWidth: CGFloat, deltaHeight: CGFloat) {
-        guard let window else { return }
-        let minSize = window.minSize
-        let maxSize = window.maxSize
-        var frame = window.frame
-        let newWidth = min(maxSize.width, max(minSize.width, frame.width + deltaWidth))
-        let newHeight = min(maxSize.height, max(minSize.height, frame.height + deltaHeight))
-        let heightDelta = newHeight - frame.height
-        frame.size.width = newWidth
-        frame.size.height = newHeight
-        frame.origin.y -= heightDelta
-        window.setFrame(frame, display: true, animate: true)
-    }
-
-    @objc private func changeWidgetSize() {
-        guard let window else { return }
-        let scale = CGFloat(sizeSlider.doubleValue)
-        sizeValue.stringValue = "\(Int(round(sizeSlider.doubleValue * 100))) %"
-        let targetWidth = 430 * scale
-        let targetHeight = 680 * scale
-        var frame = window.frame
-        let newWidth = min(window.maxSize.width, max(window.minSize.width, targetWidth))
-        let newHeight = min(window.maxSize.height, max(window.minSize.height, targetHeight))
-        let heightDelta = newHeight - frame.height
-        frame.size = NSSize(width: newWidth, height: newHeight)
-        frame.origin.y -= heightDelta
-        window.setFrame(frame, display: true, animate: false)
     }
 
     fileprivate static func resize(

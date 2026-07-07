@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.12 - 2026-07-07
+
+- Removed all desktop-widget scale buttons and the widget-size slider.
+- Simplified desktop-widget resizing so the window is resized by dragging the edge or corner.
+- Updated the project site to use rendered PNG screenshots, including a new desktop-widget image.
+
 ## 0.1.11 - 2026-07-07
 
 - Fixed data-source settings so Demo, local JSON command, and JSON URL can be selected again without SOLIX login fields forcing the local helper mode.
