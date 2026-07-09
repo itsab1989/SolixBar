@@ -62,7 +62,7 @@ final class StatusController: NSObject {
 
     private func updateTitle() {
         if isMenuBarDetached {
-            setStatusTitle("SOLIX")
+            setStatusTitle(detachedMenuBarStatusTitle())
             return
         }
 
@@ -644,6 +644,10 @@ final class StatusController: NSObject {
         if detachedMenuBarWindow == nil {
             detachedMenuBarWindow = DetachedMenuBarWindowController(
                 snapshotProvider: { [weak self] in self?.currentSnapshot() },
+                attributedBarProvider: { [weak self] in
+                    guard let self, let snapshot = self.currentSnapshot() else { return nil }
+                    return self.barAttributedText(for: snapshot)
+                },
                 onClose: { [weak self] in
                     self?.isMenuBarDetached = false
                     self?.detachedMenuBarWindow = nil
@@ -654,6 +658,13 @@ final class StatusController: NSObject {
         isMenuBarDetached = true
         updateTitle()
         detachedMenuBarWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
+    }
+
+    private func detachedMenuBarStatusTitle() -> String {
+        guard let snapshot = currentSnapshot() else {
+            return lastError == nil ? "Online" : "Offline"
+        }
+        return snapshot.status?.localizedCaseInsensitiveContains("offline") == true ? "Offline" : "Online"
     }
 
     private func statusButtonFrameOnScreen() -> NSRect? {
@@ -670,6 +681,7 @@ final class StatusController: NSObject {
         clearStaleSnapshotIfNeeded()
         updateTitle()
         rebuildMenu()
+        detachedMenuBarWindow?.rebuild()
         if refreshNow {
             refresh()
         }

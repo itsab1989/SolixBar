@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.15 - 2026-07-09
+
+- Fixed the detachable slim menu-bar window so it uses the same symbols, arrows, colors, order, and selected values as the real macOS menu bar.
+- The detached slim bar now resizes automatically based on the number of visible values.
+- While the slim bar is detached, the macOS menu bar keeps only an Online/Offline status label and restores the full value display when the slim bar is closed.
+- Added a glass-style background to the detached slim bar.
+
 ## 0.1.14 - 2026-07-09
 
 - Added a detachable slim menu-bar window that mirrors the selected menu-bar values below the macOS menu bar.

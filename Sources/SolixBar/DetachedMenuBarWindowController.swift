@@ -1,12 +1,19 @@
 import AppKit
 
 @MainActor
-final class DetachedMenuBarWindowController: NSWindowController {
+final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegate {
     private let snapshotProvider: () -> SolixSnapshot?
+    private let attributedBarProvider: () -> NSAttributedString?
     private let onClose: () -> Void
+    private var didNotifyClose = false
 
-    init(snapshotProvider: @escaping () -> SolixSnapshot?, onClose: @escaping () -> Void) {
+    init(
+        snapshotProvider: @escaping () -> SolixSnapshot?,
+        attributedBarProvider: @escaping () -> NSAttributedString?,
+        onClose: @escaping () -> Void
+    ) {
         self.snapshotProvider = snapshotProvider
+        self.attributedBarProvider = attributedBarProvider
         self.onClose = onClose
         let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 44),
@@ -22,6 +29,7 @@ final class DetachedMenuBarWindowController: NSWindowController {
         window.backgroundColor = .clear
         window.isOpaque = false
         super.init(window: window)
+        window.delegate = self
         rebuild()
     }
 
@@ -30,24 +38,56 @@ final class DetachedMenuBarWindowController: NSWindowController {
     }
 
     func showBelowMenuBar(anchor: NSRect?) {
+        rebuild()
         if let window, !window.isVisible {
             positionBelowMenuBar(anchor: anchor)
         }
-        rebuild()
         showWindow(nil)
     }
 
     func rebuild() {
         guard let window else { return }
+        let attributedText = attributedBarProvider()
         let oldFrame = window.frame
-        let view = DetachedMenuBarView(snapshot: snapshotProvider(), onClose: { [weak self] in
-            self?.close()
-            self?.onClose()
+        let targetSize = targetSize(for: attributedText, screen: window.screen)
+        let view = DetachedMenuBarView(attributedText: attributedText, snapshot: snapshotProvider(), onClose: { [weak self] in
+            self?.closeFromButton()
         })
-        view.frame = NSRect(origin: .zero, size: oldFrame.size)
+        view.frame = NSRect(origin: .zero, size: targetSize)
         view.autoresizingMask = [.width, .height]
         window.contentView = view
-        window.setFrame(oldFrame, display: true)
+        var frame = oldFrame
+        frame.size = targetSize
+        if let screen = window.screen {
+            frame.origin.x = min(screen.visibleFrame.maxX - targetSize.width - 8, max(screen.visibleFrame.minX + 8, frame.origin.x))
+            frame.origin.y = min(screen.visibleFrame.maxY - targetSize.height - 6, max(screen.visibleFrame.minY + 8, frame.origin.y))
+        }
+        window.setFrame(frame, display: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        notifyCloseIfNeeded()
+    }
+
+    private func closeFromButton() {
+        notifyCloseIfNeeded()
+        close()
+    }
+
+    private func notifyCloseIfNeeded() {
+        guard !didNotifyClose else { return }
+        didNotifyClose = true
+        onClose()
+    }
+
+    private func targetSize(for attributedText: NSAttributedString?, screen: NSScreen?) -> NSSize {
+        let textWidth = ceil(attributedText?.size().width ?? 152)
+        let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? 34 : 0
+        let closeWidth: CGFloat = 46
+        let horizontalPadding: CGFloat = 32
+        let width = textWidth + iconWidth + closeWidth + horizontalPadding
+        let visibleWidth = screen?.visibleFrame.width ?? 900
+        return NSSize(width: min(max(width, 260), visibleWidth - 24), height: 44)
     }
 
     private func positionBelowMenuBar(anchor: NSRect?) {
@@ -69,19 +109,19 @@ final class DetachedMenuBarWindowController: NSWindowController {
 }
 
 private final class DetachedMenuBarView: NSView {
+    private let attributedText: NSAttributedString?
     private let snapshot: SolixSnapshot?
     private let onClose: () -> Void
     private let settings = AppSettings.shared
 
-    init(snapshot: SolixSnapshot?, onClose: @escaping () -> Void) {
+    init(attributedText: NSAttributedString?, snapshot: SolixSnapshot?, onClose: @escaping () -> Void) {
+        self.attributedText = attributedText
         self.snapshot = snapshot
         self.onClose = onClose
         super.init(frame: NSRect(x: 0, y: 0, width: 640, height: 44))
         wantsLayer = true
-        layer?.cornerRadius = 15
-        layer?.backgroundColor = barBackground.cgColor
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
+        layer?.cornerRadius = 16
+        layer?.masksToBounds = true
         buildView()
     }
 
@@ -90,27 +130,57 @@ private final class DetachedMenuBarView: NSView {
     }
 
     private func buildView() {
+        let glass = NSVisualEffectView()
+        glass.material = .hudWindow
+        glass.blendingMode = .behindWindow
+        glass.state = .active
+        glass.wantsLayer = true
+        glass.layer?.cornerRadius = 16
+        glass.layer?.masksToBounds = true
+        glass.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(glass)
+
+        let border = NSView()
+        border.wantsLayer = true
+        border.layer?.cornerRadius = 16
+        border.layer?.borderWidth = 1
+        border.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.62).cgColor
+        border.layer?.backgroundColor = NSColor.clear.cgColor
+        border.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(border)
+
         let stack = NSStackView()
         stack.orientation = .horizontal
         stack.alignment = .centerY
-        stack.spacing = 12
+        stack.spacing = 10
 
-        if let image = appIcon() {
+        if settings.showMenuBarIcon, let image = appIcon() {
             let imageView = NSImageView(image: image)
             imageView.widthAnchor.constraint(equalToConstant: 24).isActive = true
             imageView.heightAnchor.constraint(equalToConstant: 24).isActive = true
             stack.addArrangedSubview(imageView)
         }
 
-        if let snapshot {
-            let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar] : settings.barMetrics
-            for metric in metrics {
-                stack.addArrangedSubview(metricLabel(metric, snapshot: snapshot))
-            }
+        if let attributedText, attributedText.length > 0 {
+            let label = NSTextField(labelWithString: "")
+            label.attributedStringValue = attributedText
+            label.lineBreakMode = .byTruncatingTail
+            label.maximumNumberOfLines = 1
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            stack.addArrangedSubview(label)
         } else {
             let label = NSTextField(labelWithString: "SOLIX wartet auf Daten")
             label.font = .systemFont(ofSize: 13, weight: .semibold)
             label.textColor = .secondaryLabelColor
+            stack.addArrangedSubview(label)
+        }
+
+        if let status = statusText {
+            let label = NSTextField(labelWithString: status)
+            label.font = .systemFont(ofSize: 11, weight: .semibold)
+            label.textColor = isOnline ? .systemGreen : .systemRed
+            label.setContentCompressionResistancePriority(.required, for: .horizontal)
+            label.toolTip = isOnline ? "Live-Daten sind verbunden." : "Keine Live-Daten verbunden."
             stack.addArrangedSubview(label)
         }
 
@@ -128,6 +198,16 @@ private final class DetachedMenuBarView: NSView {
         }
 
         NSLayoutConstraint.activate([
+            glass.leadingAnchor.constraint(equalTo: leadingAnchor),
+            glass.trailingAnchor.constraint(equalTo: trailingAnchor),
+            glass.topAnchor.constraint(equalTo: topAnchor),
+            glass.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            border.leadingAnchor.constraint(equalTo: leadingAnchor),
+            border.trailingAnchor.constraint(equalTo: trailingAnchor),
+            border.topAnchor.constraint(equalTo: topAnchor),
+            border.bottomAnchor.constraint(equalTo: bottomAnchor),
+
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor),
             stack.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -10),
@@ -135,103 +215,6 @@ private final class DetachedMenuBarView: NSView {
             closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             closeButton.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
-    }
-
-    private func metricLabel(_ metric: BarMetric, snapshot: SolixSnapshot) -> NSTextField {
-        let label = NSTextField(labelWithString: text(for: metric, snapshot: snapshot))
-        label.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
-        label.textColor = color(for: metric, snapshot: snapshot)
-        label.lineBreakMode = .byTruncatingTail
-        label.toolTip = metric.title
-        return label
-    }
-
-    private func text(for metric: BarMetric, snapshot: SolixSnapshot) -> String {
-        let prefix = settings.showMetricLabels ? "\(metric.shortTitle) " : ""
-        let arrow = settings.showEnergyFlowArrows ? flowArrow(for: metric, snapshot: snapshot) : ""
-        switch metric {
-        case .battery:
-            return "\(arrow)\(prefix)\(snapshot.batteryPercent.map { "\($0)%" } ?? "--%")"
-        case .solar:
-            return "\(arrow)\(prefix)\(snapshot.solarWatts.map { "\($0)W" } ?? "--W")"
-        case .home:
-            return "\(prefix)\(snapshot.homeWatts.map { "\($0)W" } ?? "--W")"
-        case .grid:
-            return "\(arrow)\(prefix)\(signedWatts(snapshot.gridWatts) ?? "--W")"
-        case .batteryFlow:
-            return "\(arrow)\(prefix)\(signedWatts(snapshot.batteryWatts) ?? "--W")"
-        case .flow:
-            return flowSummary(snapshot)
-        case .today:
-            return "\(prefix)\(snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh")"
-        case .total:
-            return "\(prefix)\(snapshot.totalKWh.map { String(format: "%.1fkWh", $0) } ?? "--kWh")"
-        case .status:
-            return "\(prefix)\(snapshot.status ?? "-")"
-        }
-    }
-
-    private func flowSummary(_ snapshot: SolixSnapshot) -> String {
-        let parts = [BarMetric.solar, .batteryFlow, .grid]
-            .map { flowArrow(for: $0, snapshot: snapshot).trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-        return parts.isEmpty ? "Flow -" : "Flow \(parts.joined(separator: " "))"
-    }
-
-    private func flowArrow(for metric: BarMetric, snapshot: SolixSnapshot) -> String {
-        switch metric {
-        case .solar:
-            return (snapshot.solarWatts ?? 0) > 0 ? "⬇ " : ""
-        case .grid:
-            guard let watts = snapshot.gridWatts else { return "" }
-            if watts > 0 { return "⬆ " }
-            if watts < 0 { return "⬇ " }
-            return ""
-        case .batteryFlow:
-            guard let watts = snapshot.batteryWatts else { return "" }
-            if watts > 0 { return "⬇ " }
-            if watts < 0 { return "⬆ " }
-            return ""
-        default:
-            return ""
-        }
-    }
-
-    private func color(for metric: BarMetric, snapshot: SolixSnapshot) -> NSColor {
-        switch metric {
-        case .battery:
-            guard let percent = snapshot.batteryPercent else { return .secondaryLabelColor }
-            if percent <= 20 { return .systemRed }
-            if percent <= 45 { return .systemOrange }
-            return highContrastGreen
-        case .solar:
-            return solarColor
-        case .home:
-            return .systemBlue
-        case .grid:
-            guard let watts = snapshot.gridWatts else { return .secondaryLabelColor }
-            if watts > 0 { return highContrastRed }
-            if watts < 0 { return highContrastGreen }
-            return .secondaryLabelColor
-        case .batteryFlow:
-            guard let watts = snapshot.batteryWatts else { return .secondaryLabelColor }
-            if watts > 0 { return highContrastGreen }
-            if watts < 0 { return highContrastRed }
-            return .secondaryLabelColor
-        case .flow:
-            return highContrastGreen
-        case .today:
-            return .systemPurple
-        case .total:
-            return .systemIndigo
-        case .status:
-            return snapshot.status?.localizedCaseInsensitiveContains("offline") == true ? highContrastRed : highContrastGreen
-        }
-    }
-
-    private func signedWatts(_ value: Int?) -> String? {
-        guard let value else { return nil }
-        return value > 0 ? "+\(value)W" : "\(value)W"
     }
 
     private func appIcon() -> NSImage? {
@@ -245,23 +228,12 @@ private final class DetachedMenuBarView: NSView {
         onClose()
     }
 
-    private var highContrastGreen: NSColor {
-        NSColor(calibratedRed: 0.00, green: 0.58, blue: 0.22, alpha: 1)
+    private var statusText: String? {
+        guard let status = snapshot?.status, !status.isEmpty else { return nil }
+        return status.localizedCaseInsensitiveContains("offline") ? "Offline" : "Online"
     }
 
-    private var highContrastRed: NSColor {
-        NSColor(calibratedRed: 0.88, green: 0.08, blue: 0.12, alpha: 1)
-    }
-
-    private var solarColor: NSColor {
-        NSColor(calibratedRed: 0.78, green: 0.52, blue: 0.00, alpha: 1)
-    }
-
-    private var barBackground: NSColor {
-        NSColor(name: nil) { appearance in
-            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(calibratedRed: 0.08, green: 0.09, blue: 0.10, alpha: 0.96)
-                : NSColor(calibratedRed: 0.97, green: 0.985, blue: 0.98, alpha: 0.96)
-        }
+    private var isOnline: Bool {
+        !(snapshot?.status?.localizedCaseInsensitiveContains("offline") ?? false)
     }
 }
