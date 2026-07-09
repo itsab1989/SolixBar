@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-07-09
+
+- Updated the project homepage with a new rendered screenshot of the detached slim menu bar.
+- Bumped the app to the 0.2 series after the larger detached-bar, widget-resize, graph, logging, and homepage updates.
+
 ## 0.1.22 - 2026-07-09
 
 - Moved the detached slim menu bar to desktop-accessory level so normal app windows always appear in front of it.

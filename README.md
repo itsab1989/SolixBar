@@ -10,6 +10,8 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 
 ![SolixBar menu bar preview](docs/assets/menubar-shot.svg)
 
+![SolixBar detached bar preview](docs/assets/detached-bar-shot.png)
+
 ![SolixBar graph preview](docs/assets/graph-shot.svg)
 
 ## Features
@@ -31,7 +33,7 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 
 ## Version
 
-Current version: `0.1.22`
+Current version: `0.2.0`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
