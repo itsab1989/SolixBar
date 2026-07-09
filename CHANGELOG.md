@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.14 - 2026-07-09
+
+- Added a detachable slim menu-bar window that mirrors the selected menu-bar values below the macOS menu bar.
+- The detached slim bar stays independent from the large dashboard and can be closed with its inline close button.
+- While the slim bar is detached, the full value text is removed from the macOS menu bar and restored when the slim bar is closed.
+
 ## 0.1.13 - 2026-07-09
 
 - Added visible app version information in the settings window and menu.

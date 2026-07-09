@@ -13,6 +13,8 @@ final class StatusController: NSObject {
     private var largeGraphWindow: LargeGraphWindowController?
     private var desktopWidgetWindow: DesktopWidgetWindowController?
     private var detachedDashboardWindow: DetachedDashboardWindowController?
+    private var detachedMenuBarWindow: DetachedMenuBarWindowController?
+    private var isMenuBarDetached = false
 
     func start() {
         updateMenuBarIcon()
@@ -53,11 +55,17 @@ final class StatusController: NSObject {
             rebuildMenu()
             desktopWidgetWindow?.rebuild()
             detachedDashboardWindow?.rebuild()
+            detachedMenuBarWindow?.rebuild()
             largeGraphWindow?.rebuild()
         }
     }
 
     private func updateTitle() {
+        if isMenuBarDetached {
+            setStatusTitle("SOLIX")
+            return
+        }
+
         guard let snapshot = currentSnapshot() else {
             setStatusTitle(lastError == nil ? "SOLIX" : "SOLIX !")
             return
@@ -91,6 +99,7 @@ final class StatusController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(action("Aktualisieren", #selector(refreshMenuAction), "arrow.clockwise"))
+        menu.addItem(action("Menüleiste abdocken", #selector(openDetachedMenuBar), "menubar.rectangle"))
         menu.addItem(action("Dashboard abdocken", #selector(openDetachedDashboard), "macwindow.on.rectangle"))
         menu.addItem(action("Widget anzeigen", #selector(openDesktopWidget), "rectangle.inset.filled"))
         menu.addItem(action("Einstellungen ...", #selector(openSettings), "gearshape"))
@@ -629,6 +638,22 @@ final class StatusController: NSObject {
             )
         }
         detachedDashboardWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
+    }
+
+    @objc private func openDetachedMenuBar() {
+        if detachedMenuBarWindow == nil {
+            detachedMenuBarWindow = DetachedMenuBarWindowController(
+                snapshotProvider: { [weak self] in self?.currentSnapshot() },
+                onClose: { [weak self] in
+                    self?.isMenuBarDetached = false
+                    self?.detachedMenuBarWindow = nil
+                    self?.updateTitle()
+                }
+            )
+        }
+        isMenuBarDetached = true
+        updateTitle()
+        detachedMenuBarWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
     }
 
     private func statusButtonFrameOnScreen() -> NSRect? {
