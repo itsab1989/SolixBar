@@ -20,7 +20,6 @@ final class DesktopWidgetWindowController: NSWindowController {
         window.maxSize = NSSize(width: 920, height: 1160)
         window.contentResizeIncrements = NSSize(width: 1, height: 1)
         window.showsResizeIndicator = true
-        window.isMovableByWindowBackground = true
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.setFrameAutosaveName("SolixBarDesktopWidget")
@@ -48,9 +47,6 @@ final class DesktopWidgetWindowController: NSWindowController {
 final class DesktopWidgetView: NSView {
     private let snapshot: SolixSnapshot?
     private let samples: [SolixHistorySample]
-    private var activeResizeZone: WidgetResizeZone?
-    private var resizeStartMouseLocation = NSPoint.zero
-    private var resizeStartFrame = NSRect.zero
 
     init(snapshot: SolixSnapshot?, samples: [SolixHistorySample]) {
         self.snapshot = snapshot
@@ -66,39 +62,6 @@ final class DesktopWidgetView: NSView {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    override func resetCursorRects() {
-        addCursorRect(NSRect(x: bounds.maxX - 28, y: 0, width: 28, height: bounds.height), cursor: .resizeLeftRight)
-        addCursorRect(NSRect(x: 0, y: 0, width: bounds.width, height: 28), cursor: .resizeUpDown)
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        guard let zone = resizeZone(at: convert(event.locationInWindow, from: nil)) else {
-            super.mouseDown(with: event)
-            return
-        }
-        activeResizeZone = zone
-        resizeStartMouseLocation = NSEvent.mouseLocation
-        resizeStartFrame = window?.frame ?? .zero
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        guard let activeResizeZone, let window else {
-            super.mouseDragged(with: event)
-            return
-        }
-        DesktopWidgetView.resize(
-            window: window,
-            from: resizeStartFrame,
-            mouseStart: resizeStartMouseLocation,
-            zone: activeResizeZone
-        )
-    }
-
-    override func mouseUp(with event: NSEvent) {
-        activeResizeZone = nil
-        super.mouseUp(with: event)
     }
 
     private func buildView() {
@@ -147,11 +110,7 @@ final class DesktopWidgetView: NSView {
             visibleMetrics: AppSettings.shared.graphMetrics,
             size: NSSize(width: 342, height: 150)
         )
-        let rightResizeHandle = WidgetResizeHandleView(zone: .right)
-        let bottomResizeHandle = WidgetResizeHandleView(zone: .bottom)
-        let cornerResizeHandle = WidgetResizeHandleView(zone: .bottomRight)
-
-        for view in [title, subtitle, statusPill, battery, solar, grid, graph, rightResizeHandle, bottomResizeHandle, cornerResizeHandle] {
+        for view in [title, subtitle, statusPill, battery, solar, grid, graph] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -186,56 +145,8 @@ final class DesktopWidgetView: NSView {
             graph.topAnchor.constraint(equalTo: grid.bottomAnchor, constant: 16),
             graph.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
             graph.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
-            graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -28),
-
-            rightResizeHandle.topAnchor.constraint(equalTo: topAnchor, constant: 72),
-            rightResizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor),
-            rightResizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -34),
-            rightResizeHandle.widthAnchor.constraint(equalToConstant: 30),
-
-            bottomResizeHandle.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 28),
-            bottomResizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -34),
-            bottomResizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor),
-            bottomResizeHandle.heightAnchor.constraint(equalToConstant: 30),
-
-            cornerResizeHandle.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7),
-            cornerResizeHandle.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -7),
-            cornerResizeHandle.widthAnchor.constraint(equalToConstant: 28),
-            cornerResizeHandle.heightAnchor.constraint(equalToConstant: 28)
+            graph.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -28)
         ])
-    }
-
-    fileprivate static func resize(
-        window: NSWindow,
-        from startFrame: NSRect,
-        mouseStart: NSPoint,
-        zone: WidgetResizeZone
-    ) {
-        let current = NSEvent.mouseLocation
-        let deltaX = current.x - mouseStart.x
-        let deltaY = current.y - mouseStart.y
-        let minSize = window.minSize
-        let maxSize = window.maxSize
-
-        var frame = startFrame
-        if zone.includesRight {
-            frame.size.width = min(maxSize.width, max(minSize.width, startFrame.width + deltaX))
-        }
-        if zone.includesBottom {
-            frame.size.height = min(maxSize.height, max(minSize.height, startFrame.height - deltaY))
-            frame.origin.y = startFrame.maxY - frame.height
-        }
-        window.setFrame(frame, display: true, animate: false)
-    }
-
-    private func resizeZone(at point: NSPoint) -> WidgetResizeZone? {
-        let edge: CGFloat = 30
-        let right = point.x >= bounds.maxX - edge
-        let bottom = point.y <= bounds.minY + edge
-        if right && bottom { return .bottomRight }
-        if right { return .right }
-        if bottom { return .bottom }
-        return nil
     }
 
     private func bigMetric(title: String, value: String, symbol: String, color: NSColor) -> NSView {
@@ -411,117 +322,5 @@ final class DesktopWidgetView: NSView {
         let adjustedStrength = isDarkMode ? strength * 0.8 : strength
         return color.withAlphaComponent(adjustedStrength)
             .blended(withFraction: isDarkMode ? 0.72 : 0.80, of: panelBackground) ?? panelBackground
-    }
-}
-
-fileprivate enum WidgetResizeZone {
-    case right
-    case bottom
-    case bottomRight
-
-    var includesRight: Bool {
-        self == .right || self == .bottomRight
-    }
-
-    var includesBottom: Bool {
-        self == .bottom || self == .bottomRight
-    }
-}
-
-fileprivate final class WidgetResizeHandleView: NSView {
-    private let zone: WidgetResizeZone
-    private var startMouseLocation = NSPoint.zero
-    private var startFrame = NSRect.zero
-
-    init(zone: WidgetResizeZone) {
-        self.zone = zone
-        super.init(frame: .zero)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.clear.cgColor
-        toolTip = WidgetResizeHandleView.tooltip(for: zone)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override var acceptsFirstResponder: Bool { true }
-
-    override func resetCursorRects() {
-        addCursorRect(bounds, cursor: zone.includesRight && !zone.includesBottom ? .resizeLeftRight : .resizeUpDown)
-    }
-
-    override func mouseDown(with event: NSEvent) {
-        startMouseLocation = NSEvent.mouseLocation
-        startFrame = window?.frame ?? .zero
-    }
-
-    override func mouseDragged(with event: NSEvent) {
-        guard let window else { return }
-        DesktopWidgetView.resize(
-            window: window,
-            from: startFrame,
-            mouseStart: startMouseLocation,
-            zone: zone
-        )
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        let color = NSColor.secondaryLabelColor.withAlphaComponent(0.72)
-        color.setStroke()
-        switch zone {
-        case .right:
-            drawRightGrip(color: color)
-        case .bottom:
-            drawBottomGrip(color: color)
-        case .bottomRight:
-            drawCornerGrip(color: color)
-        }
-    }
-
-    private func drawRightGrip(color: NSColor) {
-        color.setStroke()
-        for offset in stride(from: CGFloat(7), through: bounds.height - 7, by: 8) {
-            let path = NSBezierPath()
-            path.move(to: NSPoint(x: bounds.midX - 2, y: offset))
-            path.line(to: NSPoint(x: bounds.midX + 2, y: offset))
-            path.lineWidth = 1.4
-            path.stroke()
-        }
-    }
-
-    private func drawBottomGrip(color: NSColor) {
-        color.setStroke()
-        let center = bounds.midX
-        for offset in stride(from: CGFloat(-18), through: CGFloat(18), by: 8) {
-            let path = NSBezierPath()
-            path.move(to: NSPoint(x: center + offset, y: bounds.midY - 2))
-            path.line(to: NSPoint(x: center + offset, y: bounds.midY + 2))
-            path.lineWidth = 1.4
-            path.stroke()
-        }
-    }
-
-    private func drawCornerGrip(color: NSColor) {
-        color.setStroke()
-        for offset in stride(from: CGFloat(7), through: CGFloat(19), by: 5) {
-            let path = NSBezierPath()
-            path.move(to: NSPoint(x: bounds.maxX - offset, y: bounds.minY + 4))
-            path.line(to: NSPoint(x: bounds.maxX - 4, y: bounds.minY + offset))
-            path.lineWidth = 1.2
-            path.stroke()
-        }
-    }
-
-    private static func tooltip(for zone: WidgetResizeZone) -> String {
-        switch zone {
-        case .right:
-            "Hier ziehen, um das Widget breiter zu machen."
-        case .bottom:
-            "Hier ziehen, um das Widget höher zu machen."
-        case .bottomRight:
-            "Hier ziehen, um das Widget größer zu machen."
-        }
     }
 }

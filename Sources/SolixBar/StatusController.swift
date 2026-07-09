@@ -12,6 +12,7 @@ final class StatusController: NSObject {
     private var settingsWindow: SettingsWindowController?
     private var largeGraphWindow: LargeGraphWindowController?
     private var desktopWidgetWindow: DesktopWidgetWindowController?
+    private var detachedDashboardWindow: DetachedDashboardWindowController?
 
     func start() {
         updateMenuBarIcon()
@@ -51,6 +52,7 @@ final class StatusController: NSObject {
             updateTitle()
             rebuildMenu()
             desktopWidgetWindow?.rebuild()
+            detachedDashboardWindow?.rebuild()
             largeGraphWindow?.rebuild()
         }
     }
@@ -89,9 +91,11 @@ final class StatusController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
         menu.addItem(action("Aktualisieren", #selector(refreshMenuAction), "arrow.clockwise"))
+        menu.addItem(action("Dashboard abdocken", #selector(openDetachedDashboard), "macwindow.on.rectangle"))
         menu.addItem(action("Widget anzeigen", #selector(openDesktopWidget), "rectangle.inset.filled"))
         menu.addItem(action("Einstellungen ...", #selector(openSettings), "gearshape"))
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(versionItem())
         menu.addItem(action("Beenden", #selector(quit), "power"))
         item.menu = menu
     }
@@ -185,6 +189,20 @@ final class StatusController: NSObject {
         let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
         item.target = self
         item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        return item
+    }
+
+    private func versionItem() -> NSMenuItem {
+        let item = NSMenuItem(title: AppVersion.display, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        item.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: "Version")
+        item.attributedTitle = NSAttributedString(
+            string: AppVersion.display,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 12, weight: .medium),
+                .foregroundColor: NSColor.secondaryLabelColor
+            ]
+        )
         return item
     }
 
@@ -417,17 +435,17 @@ final class StatusController: NSObject {
         switch metric {
         case .solar:
             guard let watts = snapshot.solarWatts else { return nil }
-            return watts > 0 ? ("↓", productionColor(watts)) : ("↕", .systemGray)
+            return watts > 0 ? ("⬇", highContrastGreen) : ("•", .systemGray)
         case .grid:
             guard let watts = snapshot.gridWatts else { return nil }
-            if watts > 0 { return ("↑", consumptionColor(watts)) }
-            if watts < 0 { return ("↓", storageColor(abs(watts))) }
-            return ("↕", .systemGray)
+            if watts > 0 { return ("⬆", highContrastRed) }
+            if watts < 0 { return ("⬇", highContrastGreen) }
+            return ("•", .systemGray)
         case .batteryFlow:
             guard let watts = snapshot.batteryWatts else { return nil }
-            if watts > 0 { return ("↓", storageColor(watts)) }
-            if watts < 0 { return ("↑", consumptionColor(abs(watts))) }
-            return ("↕", .systemGray)
+            if watts > 0 { return ("⬇", highContrastGreen) }
+            if watts < 0 { return ("⬆", highContrastRed) }
+            return ("•", .systemGray)
         default:
             return nil
         }
@@ -476,7 +494,10 @@ final class StatusController: NSObject {
         NSAttributedString(
             string: string,
             attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * settings.menuBarScale), weight: weight),
+                .font: NSFont.monospacedDigitSystemFont(
+                    ofSize: round((string.contains("⬇") || string.contains("⬆")) ? 15 * settings.menuBarScale : 13 * settings.menuBarScale),
+                    weight: weight
+                ),
                 .foregroundColor: color
             ]
         )
@@ -507,6 +528,14 @@ final class StatusController: NSObject {
         if watts <= 0 { return .secondaryLabelColor }
         if watts < 250 { return .systemYellow }
         return storageColor(watts)
+    }
+
+    private var highContrastGreen: NSColor {
+        NSColor(calibratedRed: 0.00, green: 0.58, blue: 0.22, alpha: 1)
+    }
+
+    private var highContrastRed: NSColor {
+        NSColor(calibratedRed: 0.88, green: 0.08, blue: 0.12, alpha: 1)
     }
 
     private func storageColor(_ watts: Int) -> NSColor {
@@ -582,6 +611,29 @@ final class StatusController: NSObject {
         desktopWidgetWindow?.rebuild()
         desktopWidgetWindow?.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func openDetachedDashboard() {
+        if detachedDashboardWindow == nil {
+            detachedDashboardWindow = DetachedDashboardWindowController(
+                snapshotProvider: { [weak self] in self?.currentSnapshot() },
+                graphProvider: { [weak self] in self?.graphSamples() ?? [] },
+                onRangeChange: { [weak self] in
+                    self?.desktopWidgetWindow?.rebuild()
+                    self?.detachedDashboardWindow?.rebuild()
+                    self?.largeGraphWindow?.rebuild()
+                },
+                onOpenLarge: { [weak self] in
+                    self?.openLargeGraph()
+                }
+            )
+        }
+        detachedDashboardWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
+    }
+
+    private func statusButtonFrameOnScreen() -> NSRect? {
+        guard let button = item.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
     }
 
     private func applyCurrentSettings(refreshNow: Bool) {

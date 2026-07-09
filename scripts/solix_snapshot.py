@@ -11,6 +11,7 @@ import asyncio
 import json
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 
 from aiohttp import ClientSession
 from anker_solix_api import api
@@ -61,6 +62,58 @@ def _energy_total(statistics, stat_type="1"):
     return None
 
 
+def _state_path():
+    return Path(__file__).resolve().parents[1] / "work" / "solixbar-energy.json"
+
+
+def _load_energy_state():
+    try:
+        return json.loads(_state_path().read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_energy_state(state):
+    path = _state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
+
+
+def _local_energy_totals(solar_watts, now):
+    state = _load_energy_state()
+    today_key = now.astimezone().date().isoformat()
+    current_total = _first_number(state.get("totalKWh")) or 0
+    current_today = _first_number(state.get("todayKWh")) or 0
+
+    if state.get("today") != today_key:
+        current_today = 0
+
+    last_time_text = state.get("lastUpdatedAt")
+    last_solar = _first_number(state.get("lastSolarWatts"))
+    if last_time_text and last_solar is not None and solar_watts is not None:
+        try:
+            last_time = datetime.fromisoformat(last_time_text)
+            seconds = (now - last_time).total_seconds()
+            if 0 < seconds <= 30 * 60:
+                kwh = ((last_solar + solar_watts) / 2) * seconds / 3_600_000
+                current_today += kwh
+                current_total += kwh
+        except ValueError:
+            pass
+
+    state.update(
+        {
+            "today": today_key,
+            "todayKWh": current_today,
+            "totalKWh": current_total,
+            "lastSolarWatts": solar_watts,
+            "lastUpdatedAt": now.isoformat(),
+        }
+    )
+    _save_energy_state(state)
+    return current_today, current_total
+
+
 async def main():
     user = os.environ["ANKER_SOLIX_USER"]
     password = os.environ["ANKER_SOLIX_PASSWORD"]
@@ -96,22 +149,29 @@ async def main():
         except Exception:
             today_kwh = None
 
-        battery_discharge = _first_number(
-            solarbank_info.get("battery_discharge_power"),
-            first_solarbank.get("bat_discharge_power"),
-            solarbank.get("bat_discharge_power"),
-        )
-        battery_charge = _first_number(
-            solarbank_info.get("grid_to_battery_power"),
+        battery_watts = _first_number(
             solarbank_info.get("total_charging_power"),
+            first_solarbank.get("charging_power"),
+            solarbank.get("charging_power"),
             first_solarbank.get("bat_charge_power"),
             solarbank.get("bat_charge_power"),
         )
-        battery_watts = None
-        if battery_discharge is not None and battery_discharge > 0:
-            battery_watts = -battery_discharge
-        elif battery_charge is not None:
-            battery_watts = battery_charge
+        now = datetime.now(timezone.utc)
+        solar_watts = _as_int(
+            solarbank_info.get("total_photovoltaic_power"),
+            solarbank.get("input_power"),
+            first_solarbank.get("photovoltaic_power"),
+            site.get("solar_power"),
+            site.get("photovoltaic_power"),
+            site.get("pv_power"),
+        )
+        local_today_kwh, local_total_kwh = _local_energy_totals(solar_watts, now)
+        api_today_kwh = _first_number(today_kwh, site.get("today_energy"), site.get("energy_today"))
+        api_total_kwh = _first_number(
+            site.get("total_energy"),
+            site.get("energy_total"),
+            _energy_total(site.get("statistics")),
+        )
 
         snapshot = {
             "siteName": site_info.get("site_name")
@@ -125,14 +185,7 @@ async def main():
                 site.get("battery_soc"),
                 site.get("soc"),
             ),
-            "solarWatts": _as_int(
-                solarbank_info.get("total_photovoltaic_power"),
-                solarbank.get("input_power"),
-                first_solarbank.get("photovoltaic_power"),
-                site.get("solar_power"),
-                site.get("photovoltaic_power"),
-                site.get("pv_power"),
-            ),
+            "solarWatts": solar_watts,
             "homeWatts": _as_int(
                 solarbank_info.get("to_home_load"),
                 solarbank_info.get("total_output_power"),
@@ -148,14 +201,10 @@ async def main():
                 site.get("to_grid_power"),
             ),
             "batteryWatts": _as_int(battery_watts),
-            "todayKWh": _first_number(today_kwh, site.get("today_energy"), site.get("energy_today"), 0),
-            "totalKWh": _first_number(
-                site.get("total_energy"),
-                site.get("energy_total"),
-                _energy_total(site.get("statistics")),
-            ),
+            "todayKWh": max(api_today_kwh or 0, local_today_kwh),
+            "totalKWh": max(api_total_kwh or 0, local_total_kwh),
             "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",
-            "updatedAt": datetime.now(timezone.utc).isoformat(),
+            "updatedAt": now.isoformat(),
         }
 
         print(json.dumps(snapshot, separators=(",", ":")))

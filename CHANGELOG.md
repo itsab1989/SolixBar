@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.1.13 - 2026-07-09
+
+- Added visible app version information in the settings window and menu.
+- Added a detachable dashboard window that opens below the macOS menu bar.
+- Removed the custom desktop-widget resize overlay so macOS native window resizing can work without intercepted mouse events.
+- Fixed Solarbank 4 battery-flow mapping by using the signed charging power field.
+- Added local fallback energy counting for today's and total solar yield when the Anker API reports `0.00`.
+- Improved menu bar energy-flow arrows with higher-contrast green/red glyphs instead of low-contrast yellow arrows.
+- Reduced overlap risk in compact history graph layouts.
+
 ## 0.1.12 - 2026-07-07
 
 - Removed all desktop-widget scale buttons and the widget-size slider.

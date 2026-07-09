@@ -102,7 +102,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
 
-        let title = NSTextField(labelWithString: "SOLIX Bar")
+        let title = NSTextField(labelWithString: "SOLIX Bar \(AppVersion.short)")
         title.font = .boldSystemFont(ofSize: 20)
 
         let tabs = NSTabView()

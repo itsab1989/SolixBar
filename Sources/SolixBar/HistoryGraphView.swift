@@ -52,7 +52,14 @@ final class HistoryGraphView: NSView {
         drawHeader()
         drawLegend()
 
-        let plot = NSRect(x: 44, y: 44, width: bounds.width - 92, height: bounds.height - 112)
+        let topInset: CGFloat = bounds.height < 180 ? 66 : 78
+        let bottomInset: CGFloat = bounds.height < 180 ? 34 : 44
+        let plot = NSRect(
+            x: 48,
+            y: bottomInset,
+            width: max(80, bounds.width - 104),
+            height: max(48, bounds.height - topInset - bottomInset)
+        )
         let maxPower = maxPowerValue()
         drawGrid(in: plot, maxPower: maxPower)
         drawAxes(in: plot)
@@ -104,7 +111,7 @@ final class HistoryGraphView: NSView {
         drawText(
             "Verlauf \(rangeTitle)",
             at: NSPoint(x: 16, y: bounds.maxY - 25),
-            font: .boldSystemFont(ofSize: 13),
+            font: .boldSystemFont(ofSize: bounds.height < 180 ? 12 : 13),
             color: .labelColor
         )
     }
@@ -301,18 +308,20 @@ final class HistoryGraphView: NSView {
     }
 
     private func drawLegend() {
-        let y = bounds.maxY - 50
-        var x = max(18, min(bounds.width - CGFloat(visibleMetrics.count * 82), 160))
+        let y = bounds.maxY - (bounds.height < 180 ? 46 : 52)
+        var x: CGFloat = 18
+        let maxWidth = bounds.width - 36
+        let compact = maxWidth < 310
         if visibleMetrics.contains(.battery) {
-            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y, width: 58)
-            x += 66
+            drawLegendItem(title: "Akku", color: batteryColor, x: x, y: y, width: compact ? 50 : 58)
+            x += compact ? 56 : 66
         }
         if visibleMetrics.contains(.solar) {
-            drawLegendItem(title: "Solar", color: solarColor, x: x, y: y, width: 64)
-            x += 72
+            drawLegendItem(title: "Solar", color: solarColor, x: x, y: y, width: compact ? 54 : 64)
+            x += compact ? 60 : 72
         }
         if visibleMetrics.contains(.grid) {
-            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y, width: 58)
+            drawLegendItem(title: "Netz", color: gridColor, x: x, y: y, width: compact ? 50 : 58)
         }
     }
 
