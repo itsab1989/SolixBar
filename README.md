@@ -27,10 +27,11 @@ Project homepage files are in [`docs/`](docs/) and can be published with GitHub 
 - Enlarged graph view on click with its own graph controls.
 - Floating desktop widget window.
 - Short tooltips for settings and dashboard fields.
+- Local log file for easier troubleshooting: `~/Library/Application Support/SolixBar/SolixBar.log`.
 
 ## Version
 
-Current version: `0.1.16`
+Current version: `0.1.17`
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

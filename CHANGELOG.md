@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.17 - 2026-07-09
+
+- Added a local app log file at `~/Library/Application Support/SolixBar/SolixBar.log` plus a menu action to reveal it.
+- Restored the detached slim menu bar automatically after app restart when it was active before quitting.
+- Refined the detached slim bar with a more colorful but readable accent gradient based on the selected metrics.
+- Strengthened energy-flow colors for solar production, battery storage, and consumption.
+
 ## 0.1.16 - 2026-07-09
 
 - Improved the detached slim bar background with a more readable modern macOS-style surface.

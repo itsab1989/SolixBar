@@ -172,6 +172,7 @@ struct AppSettingsSnapshot {
     var historyRange: HistoryRange
     var customHistoryDays: Double
     var graphMetrics: [GraphMetric]
+    var isDetachedMenuBarActive: Bool
 }
 
 @MainActor
@@ -296,6 +297,11 @@ final class AppSettings {
         }
     }
 
+    var isDetachedMenuBarActive: Bool {
+        get { defaults.bool(forKey: "isDetachedMenuBarActive") }
+        set { defaults.set(newValue, forKey: "isDetachedMenuBarActive") }
+    }
+
     func snapshot() -> AppSettingsSnapshot {
         AppSettingsSnapshot(
             dataSourceMode: dataSourceMode,
@@ -311,7 +317,8 @@ final class AppSettings {
             detachedMenuBarScale: detachedMenuBarScale,
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
-            graphMetrics: graphMetrics
+            graphMetrics: graphMetrics,
+            isDetachedMenuBarActive: isDetachedMenuBarActive
         )
     }
 
@@ -330,5 +337,6 @@ final class AppSettings {
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
         graphMetrics = snapshot.graphMetrics
+        isDetachedMenuBarActive = snapshot.isDetachedMenuBarActive
     }
 }

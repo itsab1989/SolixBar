@@ -145,6 +145,10 @@ private final class DetachedMenuBarView: NSView {
         fill.translatesAutoresizingMaskIntoConstraints = false
         addSubview(fill)
 
+        let accent = AccentGradientView(colors: accentColors)
+        accent.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(accent)
+
         let border = NSView()
         border.wantsLayer = true
         border.layer?.cornerRadius = 16
@@ -206,6 +210,11 @@ private final class DetachedMenuBarView: NSView {
             fill.topAnchor.constraint(equalTo: topAnchor),
             fill.bottomAnchor.constraint(equalTo: bottomAnchor),
 
+            accent.leadingAnchor.constraint(equalTo: leadingAnchor),
+            accent.trailingAnchor.constraint(equalTo: trailingAnchor),
+            accent.topAnchor.constraint(equalTo: topAnchor),
+            accent.bottomAnchor.constraint(equalTo: bottomAnchor),
+
             border.leadingAnchor.constraint(equalTo: leadingAnchor),
             border.trailingAnchor.constraint(equalTo: trailingAnchor),
             border.topAnchor.constraint(equalTo: topAnchor),
@@ -238,5 +247,72 @@ private final class DetachedMenuBarView: NSView {
                 ? NSColor(calibratedRed: 0.10, green: 0.12, blue: 0.13, alpha: 0.94)
                 : NSColor(calibratedRed: 0.96, green: 0.98, blue: 0.97, alpha: 0.92)
         }
+    }
+
+    private var accentColors: [NSColor] {
+        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar] : settings.barMetrics
+        let colors = metrics.map(accentColor)
+        return Array(colors.prefix(5))
+    }
+
+    private func accentColor(for metric: BarMetric) -> NSColor {
+        switch metric {
+        case .battery:
+            return NSColor(calibratedRed: 0.17, green: 0.78, blue: 0.36, alpha: 1)
+        case .solar, .today:
+            return NSColor(calibratedRed: 1.00, green: 0.68, blue: 0.03, alpha: 1)
+        case .home:
+            return NSColor(calibratedRed: 0.16, green: 0.50, blue: 0.96, alpha: 1)
+        case .grid:
+            return NSColor(calibratedRed: 0.95, green: 0.18, blue: 0.22, alpha: 1)
+        case .batteryFlow, .flow:
+            return NSColor(calibratedRed: 0.00, green: 0.70, blue: 0.46, alpha: 1)
+        case .total:
+            return NSColor(calibratedRed: 0.48, green: 0.35, blue: 0.95, alpha: 1)
+        case .status:
+            return NSColor(calibratedRed: 0.12, green: 0.72, blue: 0.38, alpha: 1)
+        }
+    }
+}
+
+private final class AccentGradientView: NSView {
+    private let colors: [NSColor]
+
+    init(colors: [NSColor]) {
+        self.colors = colors
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerRadius = 16
+        layer?.masksToBounds = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func makeBackingLayer() -> CALayer {
+        let layer = CAGradientLayer()
+        layer.startPoint = CGPoint(x: 0, y: 0.5)
+        layer.endPoint = CGPoint(x: 1, y: 0.5)
+        layer.cornerRadius = 16
+        layer.masksToBounds = true
+        layer.colors = gradientColors
+        layer.locations = gradientLocations
+        return layer
+    }
+
+    private var gradientColors: [CGColor] {
+        let base = colors.isEmpty
+            ? [
+                NSColor(calibratedRed: 0.17, green: 0.78, blue: 0.36, alpha: 1),
+                NSColor(calibratedRed: 1.00, green: 0.68, blue: 0.03, alpha: 1)
+            ]
+            : colors
+        return base.map { $0.withAlphaComponent(0.18).cgColor }
+    }
+
+    private var gradientLocations: [NSNumber] {
+        guard gradientColors.count > 1 else { return [0, 1] }
+        return (0..<gradientColors.count).map { NSNumber(value: Double($0) / Double(gradientColors.count - 1)) }
     }
 }

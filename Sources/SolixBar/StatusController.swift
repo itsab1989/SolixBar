@@ -15,15 +15,28 @@ final class StatusController: NSObject {
     private var detachedDashboardWindow: DetachedDashboardWindowController?
     private var detachedMenuBarWindow: DetachedMenuBarWindowController?
     private var isMenuBarDetached = false
+    private var isTerminating = false
 
     func start() {
         updateMenuBarIcon()
         setStatusTitle("SOLIX")
         rebuildMenu()
         refresh()
+        if settings.isDetachedMenuBarActive {
+            AppLogger.info("Restoring detached slim bar from previous session.")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.openDetachedMenuBar()
+            }
+        }
         timer = Timer.scheduledTimer(withTimeInterval: settings.refreshInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
+    }
+
+    func prepareForTermination() {
+        isTerminating = true
+        settings.isDetachedMenuBarActive = isMenuBarDetached
+        AppLogger.info("Persisted detached slim bar state: \(isMenuBarDetached ? "active" : "inactive").")
     }
 
     private func provider() -> SolixDataProvider {
@@ -38,6 +51,7 @@ final class StatusController: NSObject {
     }
 
     private func refresh() {
+        AppLogger.info("Refreshing data source: \(settings.dataSourceMode.rawValue).")
         if isMenuBarDetached {
             setStatusAttributedTitle(detachedMenuBarStatusAttributedTitle())
         } else {
@@ -50,10 +64,12 @@ final class StatusController: NSObject {
                 lastSnapshotMode = settings.dataSourceMode
                 lastError = nil
                 historyStore.record(snapshot)
+                AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
             } catch {
                 lastSnapshot = nil
                 lastSnapshotMode = nil
                 lastError = error.localizedDescription
+                AppLogger.error("Refresh failed: \(error.localizedDescription)")
             }
             updateTitle()
             rebuildMenu()
@@ -107,6 +123,7 @@ final class StatusController: NSObject {
         menu.addItem(action("Dashboard abdocken", #selector(openDetachedDashboard), "macwindow.on.rectangle"))
         menu.addItem(action("Widget anzeigen", #selector(openDesktopWidget), "rectangle.inset.filled"))
         menu.addItem(action("Einstellungen ...", #selector(openSettings), "gearshape"))
+        menu.addItem(action("Logdatei anzeigen", #selector(showLogFile), "doc.text.magnifyingglass"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(versionItem())
         menu.addItem(action("Beenden", #selector(quit), "power"))
@@ -343,7 +360,7 @@ final class StatusController: NSObject {
     }
 
     private var solarColor: NSColor {
-        NSColor(calibratedRed: 0.93, green: 0.66, blue: 0.08, alpha: 1)
+        NSColor(calibratedRed: 1.00, green: 0.64, blue: 0.02, alpha: 1)
     }
 
     private func batteryFlowSymbol(_ watts: Int?) -> String {
@@ -539,7 +556,7 @@ final class StatusController: NSObject {
 
     private func productionColor(_ watts: Int) -> NSColor {
         if watts <= 0 { return .secondaryLabelColor }
-        if watts < 250 { return .systemYellow }
+        if watts < 250 { return NSColor(calibratedRed: 0.98, green: 0.64, blue: 0.02, alpha: 1) }
         return storageColor(watts)
     }
 
@@ -554,8 +571,8 @@ final class StatusController: NSObject {
     private func storageColor(_ watts: Int) -> NSColor {
         let fraction = min(1, max(0, Double(watts) / 2000.0))
         return interpolateColor(
-            from: NSColor(calibratedRed: 0.95, green: 0.72, blue: 0.16, alpha: 1),
-            to: NSColor(calibratedRed: 0.18, green: 0.76, blue: 0.36, alpha: 1),
+            from: NSColor(calibratedRed: 1.00, green: 0.65, blue: 0.03, alpha: 1),
+            to: NSColor(calibratedRed: 0.00, green: 0.68, blue: 0.32, alpha: 1),
             fraction: fraction
         )
     }
@@ -563,8 +580,8 @@ final class StatusController: NSObject {
     private func consumptionColor(_ watts: Int) -> NSColor {
         let fraction = min(1, max(0, Double(watts) / 2000.0))
         return interpolateColor(
-            from: NSColor(calibratedRed: 0.95, green: 0.72, blue: 0.16, alpha: 1),
-            to: NSColor(calibratedRed: 0.94, green: 0.20, blue: 0.22, alpha: 1),
+            from: NSColor(calibratedRed: 1.00, green: 0.65, blue: 0.03, alpha: 1),
+            to: NSColor(calibratedRed: 0.92, green: 0.08, blue: 0.12, alpha: 1),
             fraction: fraction
         )
     }
@@ -653,12 +670,18 @@ final class StatusController: NSObject {
                 },
                 onClose: { [weak self] in
                     self?.isMenuBarDetached = false
+                    if self?.isTerminating != true {
+                        self?.settings.isDetachedMenuBarActive = false
+                        AppLogger.info("Detached slim bar closed by user.")
+                    }
                     self?.detachedMenuBarWindow = nil
                     self?.updateTitle()
                 }
             )
         }
         isMenuBarDetached = true
+        settings.isDetachedMenuBarActive = true
+        AppLogger.info("Detached slim bar opened.")
         updateTitle()
         detachedMenuBarWindow?.showBelowMenuBar(anchor: statusButtonFrameOnScreen())
     }
@@ -753,5 +776,10 @@ final class StatusController: NSObject {
 
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func showLogFile() {
+        AppLogger.info("Log file requested from menu.")
+        NSWorkspace.shared.activateFileViewerSelecting([AppLogger.logURL])
     }
 }
