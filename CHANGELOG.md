@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.1 - 2026-07-09
+
+- Renamed the home metric from Haus/Hausverbrauch to Hauslast.
+- Corrected Solarbank 4 home-load mapping to prefer real smart-meter home load over Solarbank output power.
+- Corrected grid mapping so export is shown as a negative grid value instead of zero.
+- Added an optional local correction field for today's yield when Anker reports 0 kWh for the day.
+- Reduced tooltip delay for help question marks to about 0.1 seconds.
+
 ## 0.3.0 - 2026-07-09
 
 - Removed the desktop widget from the app and project homepage.

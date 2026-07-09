@@ -53,7 +53,7 @@
     </g>
     <text x="430" y="494" fill="#9bc32e">PV 790W</text>
     <path d="M620 503 L620 488 L641 472 L662 488 L662 503 L651 503 L651 490 L631 490 L631 503 Z" fill="#1782ff"/>
-    <text x="674" y="494" fill="#fb8d13">Haus 790W</text>
+    <text x="674" y="494" fill="#fb8d13">Hauslast 790W</text>
     <circle cx="885" cy="494" r="5" fill="#919895"/>
     <path d="M920 488 L938 488 L938 477 L952 477 L952 511 L938 511 L938 501 L920 501 Z" fill="#7b8280"/>
     <text x="965" y="494" fill="#737b78">Netz 0 W</text>

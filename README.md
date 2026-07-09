@@ -2,7 +2,7 @@
 
 SolixBar ist eine native macOS-Menueleisten-App fuer Anker SOLIX Uebersichtsdaten.
 
-Sie zeigt Akku, PV, Hausverbrauch, Netzbezug, Energiefluss und Ertrag direkt in der Menueleiste, mit modernem Dashboard, abgedockter schmaler Leiste und Verlaufsgraf.
+Sie zeigt Akku, PV, Hauslast, Netzbezug, Energiefluss und Ertrag direkt in der Menueleiste, mit modernem Dashboard, abgedockter schmaler Leiste und Verlaufsgraf.
 
 English: SolixBar is a native macOS menu bar app for Anker SOLIX overview data. It provides a compact menu bar readout, a modern dropdown dashboard, a detachable slim bar, and a history graph.
 
@@ -29,7 +29,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 - Hell, Dunkel oder automatisch passend zum System. / Light, dark, or automatic system appearance.
 - Deutsche oder englische sichtbare App-Texte. / German or English visible app text.
 - Login-Autostart. / Login autostart support.
-- Aufklapp-Dashboard mit Akku, PV, Hausverbrauch, Netzbezug, Akku-Fluss, Tagesertrag, Gesamtertrag und Status. / Dropdown dashboard with battery, solar, home consumption, grid import, battery flow, daily yield, total yield, and status.
+- Aufklapp-Dashboard mit Akku, PV, Hauslast, Netzbezug, Akku-Fluss, Tagesertrag, Gesamtertrag und Status. / Dropdown dashboard with battery, solar, home load, grid import, battery flow, daily yield, total yield, and status.
 - Animierter Verlaufsgraf fuer Akku, Solar und Netzbezug. / Animated history graph for battery, solar, and grid import.
 - Zeitraeume: Aktuell, 24 Stunden, 7 Tage, 30 Tage und individuell. / Graph ranges: current, 24 hours, 7 days, 30 days, and custom.
 - Sichtbare Fragezeichen-Hilfen in den Einstellungen. / Visible question-mark help controls in settings.
@@ -37,7 +37,7 @@ English: Project homepage files are in [`docs/`](docs/) and can be published wit
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.3.0`
+Aktuelle Version / Current version: `0.3.1`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

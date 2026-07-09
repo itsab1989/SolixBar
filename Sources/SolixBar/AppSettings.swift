@@ -35,7 +35,7 @@ enum BarMetric: String, CaseIterable {
         case .solar:
             "PV"
         case .home:
-            "Haus"
+            "Hauslast"
         case .grid:
             "Netzbezug"
         case .batteryFlow:
@@ -58,7 +58,7 @@ enum BarMetric: String, CaseIterable {
         case .solar:
             "PV"
         case .home:
-            "Haus"
+            "Last"
         case .grid:
             "Netz"
         case .batteryFlow:

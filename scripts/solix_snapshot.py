@@ -36,6 +36,44 @@ def _as_int(*values):
     return None if number is None else int(round(number))
 
 
+def _signed_grid_watts(site):
+    grid_info = _first_dict(site.get("grid_info"))
+    imported = _first_number(
+        grid_info.get("grid_to_home_power"),
+        site.get("grid_to_home_power"),
+    )
+    exported = _first_number(
+        grid_info.get("photovoltaic_to_grid_power"),
+        site.get("to_grid_power"),
+    )
+    if imported is not None or exported is not None:
+        return int(round((imported or 0) - (exported or 0)))
+    return _as_int(
+        site.get("grid_connected_power_v2"),
+        site.get("grid_power"),
+    )
+
+
+def _signed_battery_watts(solarbank_info, solarbank, first_solarbank):
+    charge = _first_number(
+        solarbank_info.get("total_charging_power"),
+        first_solarbank.get("charging_power"),
+        solarbank.get("charging_power"),
+        first_solarbank.get("bat_charge_power"),
+        solarbank.get("bat_charge_power"),
+    )
+    discharge = _first_number(
+        solarbank_info.get("battery_discharge_power"),
+        first_solarbank.get("bat_discharge_power"),
+        solarbank.get("bat_discharge_power"),
+    )
+    if charge and charge > 0:
+        return int(round(charge))
+    if discharge and discharge > 0:
+        return -int(round(discharge))
+    return 0 if charge == 0 or discharge == 0 else None
+
+
 def _first_dict(*values):
     for value in values:
         if isinstance(value, dict):
@@ -87,6 +125,12 @@ def _local_energy_totals(solar_watts, now):
 
     if state.get("today") != today_key:
         current_today = 0
+
+    base_date = os.environ.get("SOLIXBAR_TODAY_KWH_DATE") or today_key
+    manual_base = _first_number(os.environ.get("SOLIXBAR_TODAY_KWH_BASE"))
+    if base_date == today_key and manual_base is not None and manual_base > current_today:
+        current_total += manual_base - current_today
+        current_today = manual_base
 
     last_time_text = state.get("lastUpdatedAt")
     last_solar = _first_number(state.get("lastSolarWatts"))
@@ -149,13 +193,7 @@ async def main():
         except Exception:
             today_kwh = None
 
-        battery_watts = _first_number(
-            solarbank_info.get("total_charging_power"),
-            first_solarbank.get("charging_power"),
-            solarbank.get("charging_power"),
-            first_solarbank.get("bat_charge_power"),
-            solarbank.get("bat_charge_power"),
-        )
+        battery_watts = _signed_battery_watts(solarbank_info, solarbank, first_solarbank)
         now = datetime.now(timezone.utc)
         solar_watts = _as_int(
             solarbank_info.get("total_photovoltaic_power"),
@@ -187,20 +225,20 @@ async def main():
             ),
             "solarWatts": solar_watts,
             "homeWatts": _as_int(
+                site.get("home_load_power"),
+                site.get("other_loads_power"),
+                site.get("home_load"),
+                site.get("load_power"),
+                site.get("home_power"),
+                first_solarbank.get("current_home_load"),
+                solarbank.get("current_home_load"),
                 solarbank_info.get("to_home_load"),
                 solarbank_info.get("total_output_power"),
                 solarbank.get("output_power"),
                 first_solarbank.get("output_power"),
-                site.get("home_load"),
-                site.get("load_power"),
-                site.get("home_power"),
             ),
-            "gridWatts": _as_int(
-                site.get("grid_connected_power_v2"),
-                site.get("grid_power"),
-                site.get("to_grid_power"),
-            ),
-            "batteryWatts": _as_int(battery_watts),
+            "gridWatts": _signed_grid_watts(site),
+            "batteryWatts": battery_watts,
             "todayKWh": max(api_today_kwh or 0, local_today_kwh),
             "totalKWh": max(api_total_kwh or 0, local_total_kwh),
             "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",

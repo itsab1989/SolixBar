@@ -14,6 +14,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let solixEmailField = NSTextField()
     private let solixPasswordField = NSSecureTextField()
     private let solixCountryField = NSTextField()
+    private let solixTodayBaseField = NSTextField()
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
     private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
@@ -21,6 +22,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let solixEmailRow = NSStackView()
     private let solixPasswordRow = NSStackView()
     private let solixCountryRow = NSStackView()
+    private let solixTodayBaseRow = NSStackView()
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
@@ -91,8 +93,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixPasswordField.toolTip = "Passwort deines Anker/SOLIX-Kontos. Wird lokal in work/solixbar.env gespeichert und nicht hochgeladen."
         solixCountryField.placeholderString = "DE"
         solixCountryField.toolTip = "Land deines Anker-Kontos, normalerweise DE."
+        solixTodayBaseField.placeholderString = "z.B. 7.2"
+        solixTodayBaseField.toolTip = "Optionaler Korrekturwert fuer den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zaehlt ab diesem Wert weiter."
 
-        for textField in [commandField, urlField, intervalField, solixEmailField, solixPasswordField, solixCountryField] {
+        for textField in [commandField, urlField, intervalField, solixEmailField, solixPasswordField, solixCountryField, solixTodayBaseField] {
             textField.delegate = self
         }
 
@@ -258,9 +262,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         configure(row: solixEmailRow, labelText: LocalizedText.text("Mail", "Email"), control: solixEmailField)
         configure(row: solixPasswordRow, labelText: LocalizedText.text("Passwort", "Password"), control: solixPasswordField)
         configure(row: solixCountryRow, labelText: LocalizedText.text("Land", "Country"), control: solixCountryField)
+        configure(row: solixTodayBaseRow, labelText: LocalizedText.text("Ertrag heute", "Yield today"), control: solixTodayBaseField)
         rows.addArrangedSubview(solixEmailRow)
         rows.addArrangedSubview(solixPasswordRow)
         rows.addArrangedSubview(solixCountryRow)
+        rows.addArrangedSubview(solixTodayBaseRow)
         rows.addArrangedSubview(solixHint)
         configure(row: commandRow, labelText: LocalizedText.text("Befehl", "Command"), control: commandField)
         configure(row: urlRow, labelText: "URL", control: urlField)
@@ -437,7 +443,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             case .solar:
                 return "Shows the current solar output in watts in the menu bar."
             case .home:
-                return "Shows the current home consumption in watts in the menu bar."
+                return "Shows the current real home load in watts in the menu bar."
             case .grid:
                 return "Shows current grid import or export in watts."
             case .batteryFlow:
@@ -458,7 +464,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case .solar:
             return "Zeigt die aktuelle Solarleistung in Watt in der Menüleiste."
         case .home:
-            return "Zeigt den aktuellen Hausverbrauch in Watt in der Menüleiste."
+            return "Zeigt die aktuelle echte Hauslast in Watt in der Menüleiste."
         case .grid:
             return "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt."
         case .batteryFlow:
@@ -512,6 +518,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             return "Passwort deines Anker/SOLIX-Kontos."
         case "Land", "Country":
             return "Land des Anker-Kontos, meistens DE."
+        case "Ertrag heute", "Yield today":
+            return "Korrigiert den heutigen Ertrag in kWh, wenn Anker fuer heute 0 kWh liefert."
         case "Befehl", "Command":
             return "Der lokale Befehl muss ein JSON-Objekt ausgeben."
         case "URL":
@@ -641,6 +649,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixEmailRow.isHidden = hidden
         solixPasswordRow.isHidden = hidden
         solixCountryRow.isHidden = hidden
+        solixTodayBaseRow.isHidden = hidden
     }
 
     private func restoreOriginalSettings() {
@@ -717,6 +726,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixEmailField.stringValue = values["ANKER_SOLIX_USER"] ?? ""
         solixPasswordField.stringValue = values["ANKER_SOLIX_PASSWORD"] ?? ""
         solixCountryField.stringValue = values["ANKER_SOLIX_COUNTRY"] ?? "DE"
+        solixTodayBaseField.stringValue = values["SOLIXBAR_TODAY_KWH_BASE"] ?? ""
     }
 
     private func saveSolixCredentialsIfNeeded() {
@@ -726,12 +736,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let country = solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "DE"
             : solixCountryField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let todayBase = solixTodayBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let text = [
+        var lines = [
             "ANKER_SOLIX_USER=\(shellQuoted(email))",
             "ANKER_SOLIX_PASSWORD=\(shellQuoted(password))",
             "ANKER_SOLIX_COUNTRY=\(shellQuoted(country))"
-        ].joined(separator: "\n") + "\n"
+        ]
+        if !todayBase.isEmpty {
+            lines.append("SOLIXBAR_TODAY_KWH_BASE=\(shellQuoted(todayBase.replacingOccurrences(of: ",", with: ".")))")
+            lines.append("SOLIXBAR_TODAY_KWH_DATE=\(shellQuoted(Self.todayKey()))")
+        }
+        let text = lines.joined(separator: "\n") + "\n"
 
         do {
             try FileManager.default.createDirectory(at: solixEnvURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -756,6 +772,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     private func shellQuoted(_ value: String) -> String {
         "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
+    }
+
+    private static func todayKey() -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: Date())
     }
 
     private func unquoteShellValue(_ value: String) -> String {

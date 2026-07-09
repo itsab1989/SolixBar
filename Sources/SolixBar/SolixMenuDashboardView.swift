@@ -57,7 +57,7 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.distribution = .fillEqually
 
         let details = NSStackView(views: [
-            compactMetricRow(LocalizedText.text("Hausverbrauch", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
+            compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
             compactMetricRow(LocalizedText.text("Netzbezug", "Grid Import"), signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
             compactMetricRow(LocalizedText.text("Akku-Fluss", "Battery Flow"), signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
             compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple),
@@ -294,8 +294,8 @@ final class SolixMenuDashboardView: NSView {
             return "Hier wird angezeigt, wie voll der Speicher aktuell geladen ist: \(current)."
         case "Solar":
             return "Hier wird angezeigt, wie viel Leistung die Solarmodule gerade erzeugen: \(current)."
-        case "Hausverbrauch":
-            return "Hier wird angezeigt, wie viel Leistung dein Haus gerade verbraucht: \(current)."
+        case "Hauslast":
+            return "Hier wird angezeigt, welche Leistung dein Haus gerade wirklich nutzt: \(current)."
         case "Netzbezug":
             return "Hier wird angezeigt, wie viel Leistung aus dem Netz bezogen wird. Negative Werte bedeuten Einspeisung: \(current)."
         case "Akku-Fluss":

@@ -421,7 +421,7 @@ final class StatusController: NSObject {
         case .solar:
             return "PV"
         case .home:
-            return "Home"
+            return "Home Load"
         case .grid:
             return "Grid Import"
         case .batteryFlow:
@@ -445,7 +445,7 @@ final class StatusController: NSObject {
         case .solar:
             return "PV"
         case .home:
-            return "Home"
+            return "Load"
         case .grid:
             return "Grid"
         case .batteryFlow:
