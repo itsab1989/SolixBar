@@ -286,14 +286,14 @@ private final class DetachedMenuBarView: NSView {
         } else {
             let label = NSTextField(labelWithString: "SOLIX wartet auf Daten")
             label.font = .systemFont(ofSize: 13, weight: .semibold)
-            label.textColor = .secondaryLabelColor
+            label.textColor = .white
             stack.addArrangedSubview(label)
         }
 
         let closeButton = NSButton(title: "×", target: self, action: #selector(close))
         closeButton.isBordered = false
         closeButton.font = .systemFont(ofSize: round(18 * settings.detachedMenuBarScale), weight: .bold)
-        closeButton.contentTintColor = .secondaryLabelColor
+        closeButton.contentTintColor = .white
         closeButton.toolTip = "Abgedockte Leiste schließen."
         let closeSize = round(28 * settings.detachedMenuBarScale)
         closeButton.widthAnchor.constraint(equalToConstant: closeSize).isActive = true
@@ -343,16 +343,21 @@ private final class DetachedMenuBarView: NSView {
 
     private func readableDetachedText(_ attributedText: NSAttributedString) -> NSAttributedString {
         let result = NSMutableAttributedString(attributedString: attributedText)
-        let darkText = NSColor(calibratedRed: 0.10, green: 0.13, blue: 0.12, alpha: 1)
-        let mutedText = NSColor(calibratedRed: 0.36, green: 0.42, blue: 0.39, alpha: 1)
+        let brightText = NSColor.white
+        let mutedText = NSColor(calibratedWhite: 0.86, alpha: 1)
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.72)
+        shadow.shadowBlurRadius = 2
+        shadow.shadowOffset = NSSize(width: 0, height: -1)
+        result.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: result.length))
         result.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: result.length)) { value, range, _ in
             guard let color = value as? NSColor else {
-                result.addAttribute(.foregroundColor, value: darkText, range: range)
+                result.addAttribute(.foregroundColor, value: brightText, range: range)
                 return
             }
             if color == NSColor.labelColor || color == NSColor.secondaryLabelColor || color.isNearlyWhite {
                 let substring = (result.string as NSString).substring(with: range)
-                result.addAttribute(.foregroundColor, value: substring.trimmingCharacters(in: .whitespaces) == "•" ? mutedText : darkText, range: range)
+                result.addAttribute(.foregroundColor, value: substring.trimmingCharacters(in: .whitespaces) == "•" ? mutedText : brightText, range: range)
             }
         }
         return result
@@ -365,8 +370,8 @@ private final class DetachedMenuBarView: NSView {
     private var readableBackground: NSColor {
         NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-                ? NSColor(calibratedRed: 0.10, green: 0.12, blue: 0.13, alpha: 0.94)
-                : NSColor(calibratedRed: 0.96, green: 0.98, blue: 0.97, alpha: 0.92)
+                ? NSColor(calibratedRed: 0.08, green: 0.10, blue: 0.11, alpha: 0.90)
+                : NSColor(calibratedRed: 0.10, green: 0.13, blue: 0.13, alpha: 0.82)
         }
     }
 

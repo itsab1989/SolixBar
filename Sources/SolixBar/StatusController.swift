@@ -95,7 +95,7 @@ final class StatusController: NSObject {
         if settings.showMenuBarMetricSymbols || settings.showEnergyFlowArrows || settings.barMetrics.contains(.flow) {
             setStatusAttributedTitle(barAttributedText(for: snapshot, scale: settings.menuBarScale))
         } else {
-            let parts = settings.barMetrics.map { metric in
+            let parts = visibleBarMetrics(for: snapshot).map { metric in
                 barText(for: metric, snapshot: snapshot)
             }
             setStatusTitle(parts.isEmpty ? battery : parts.joined(separator: separator()))
@@ -461,7 +461,7 @@ final class StatusController: NSObject {
 
     private func barAttributedText(for snapshot: SolixSnapshot, scale: Double) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
+        let metrics = visibleBarMetrics(for: snapshot)
         for (index, metric) in metrics.enumerated() {
             if index > 0 {
                 result.append(textAttachment(separator(scale: scale), scale: scale))
@@ -483,6 +483,13 @@ final class StatusController: NSObject {
             result.append(textAttachment(barText(for: metric, snapshot: snapshot), color: valueColor(for: metric, snapshot: snapshot), scale: scale))
         }
         return result
+    }
+
+    private func visibleBarMetrics(for snapshot: SolixSnapshot) -> [BarMetric] {
+        let metrics = settings.barMetrics.isEmpty ? [BarMetric.battery, .solar, .grid] : settings.barMetrics
+        return metrics.filter { metric in
+            metric != .total || snapshot.totalKWh != nil
+        }
     }
 
     private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot, scale: Double) {

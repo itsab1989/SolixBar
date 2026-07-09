@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.3.6 - 2026-07-10
+
+- Restored high-contrast bright text in the detached slim bar with a darker glass surface and text shadow.
+- Hid `Gesamt`/total yield automatically when the SOLIX data source cannot provide a real cumulative total.
+
 ## 0.3.5 - 2026-07-09
 
 - Corrected total-yield handling so a newly entered Anker app cumulative value resets the local runtime counter instead of leaving `Gesamt` at today's value.

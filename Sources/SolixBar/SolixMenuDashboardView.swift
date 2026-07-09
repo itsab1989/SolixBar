@@ -56,13 +56,16 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.spacing = 12
         primaryRow.distribution = .fillEqually
 
-        let details = NSStackView(views: [
+        var detailRows = [
             compactMetricRow(LocalizedText.text("Hauslast", "Home Load"), snapshot.homeWatts.map { "\($0) W" }, "house.fill", .systemBlue),
             compactMetricRow(LocalizedText.text("Netzbezug", "Grid Import"), signedWatts(snapshot.gridWatts), "powerplug.fill", gridColor),
             compactMetricRow(LocalizedText.text("Akku-Fluss", "Battery Flow"), signedWatts(snapshot.batteryWatts), "bolt.fill", batteryFlowColor),
-            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple),
-            compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), snapshot.totalKWh.map { String(format: "%.1f kWh", $0) }, "sum", .systemIndigo)
-        ])
+            compactMetricRow(LocalizedText.text("Heutiger Ertrag", "Today's Yield"), snapshot.todayKWh.map { String(format: "%.2f kWh", $0) }, "chart.bar.fill", .systemPurple)
+        ]
+        if let totalKWh = snapshot.totalKWh {
+            detailRows.append(compactMetricRow(LocalizedText.text("Gesamtertrag", "Total Yield"), String(format: "%.1f kWh", totalKWh), "sum", .systemIndigo))
+        }
+        let details = NSStackView(views: detailRows)
         details.orientation = .vertical
         details.spacing = 8
         details.wantsLayer = true
