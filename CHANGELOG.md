@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.19 - 2026-07-09
+
+- Changed the detached slim menu bar from a floating panel to a normal borderless window so other windows can move in front of it.
+- Removed the always-on-top behavior from the detached slim bar while keeping its saved position and custom appearance.
+
 ## 0.1.18 - 2026-07-09
 
 - Added reliable edge-drag resizing to the desktop widget so width and height can be changed directly at the window border.

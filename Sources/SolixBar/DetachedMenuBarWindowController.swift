@@ -13,16 +13,16 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     ) {
         self.attributedBarProvider = attributedBarProvider
         self.onClose = onClose
-        let window = NSPanel(
+        let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 44),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
         window.title = "SOLIX Leiste"
-        window.level = .floating
+        window.level = .normal
         window.isMovableByWindowBackground = true
-        window.collectionBehavior = [.canJoinAllSpaces]
+        window.collectionBehavior = [.managed]
         window.hasShadow = true
         window.backgroundColor = .clear
         window.isOpaque = false
