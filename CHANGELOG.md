@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.1.20 - 2026-07-09
+
+- Kept the detached slim menu bar at normal window level while making it visible on all macOS desktops again.
+
 ## 0.1.19 - 2026-07-09
 
 - Changed the detached slim menu bar from a floating panel to a normal borderless window so other windows can move in front of it.

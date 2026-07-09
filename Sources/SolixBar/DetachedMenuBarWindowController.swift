@@ -22,7 +22,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         window.title = "SOLIX Leiste"
         window.level = .normal
         window.isMovableByWindowBackground = true
-        window.collectionBehavior = [.managed]
+        window.collectionBehavior = [.canJoinAllSpaces]
         window.hasShadow = true
         window.backgroundColor = .clear
         window.isOpaque = false
