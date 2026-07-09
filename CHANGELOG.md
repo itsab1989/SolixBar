@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.5 - 2026-07-09
+
+- Corrected total-yield handling so a newly entered Anker app cumulative value resets the local runtime counter instead of leaving `Gesamt` at today's value.
+- Ignored zero-valued API totals when choosing a total-yield source and added an extra SOLIX statistics lookup.
+- `Gesamt` now stays empty instead of showing the local daily/runtime counter when neither the API nor the configured Anker app start value provides a true cumulative total.
+- Improved readability of default text in the detached slim bar on bright/glass backgrounds.
+- Rounded the app icon shown in the menu bar and detached slim bar.
+
 ## 0.3.4 - 2026-07-09
 
 - Replaced the app icon with the approved brighter modern SolixBar icon.

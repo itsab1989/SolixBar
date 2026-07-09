@@ -31,6 +31,11 @@ def _first_number(*values):
     return None
 
 
+def _first_positive_number(*values):
+    number = _first_number(*values)
+    return number if number and number > 0 else None
+
+
 def _as_int(*values):
     number = _first_number(*values)
     return None if number is None else int(round(number))
@@ -96,7 +101,7 @@ def _first_solarbank(devices):
 def _energy_total(statistics, stat_type="1"):
     for item in statistics or []:
         if str(item.get("type")) == stat_type:
-            return _first_number(item.get("total"))
+            return _first_positive_number(item.get("total"))
     return None
 
 
@@ -128,7 +133,10 @@ def _local_energy_totals(solar_watts, now):
 
     manual_total = _first_number(os.environ.get("SOLIXBAR_TOTAL_KWH_BASE"))
     has_manual_total = manual_total is not None
-    if has_manual_total and manual_total > current_total:
+    previous_manual_total = _first_number(state.get("manualTotalBaseKWh"))
+    if has_manual_total and previous_manual_total != manual_total:
+        current_total = manual_total
+    elif has_manual_total and manual_total > current_total:
         current_total = manual_total
 
     base_date = os.environ.get("SOLIXBAR_TODAY_KWH_DATE") or today_key
@@ -156,12 +164,13 @@ def _local_energy_totals(solar_watts, now):
             "today": today_key,
             "todayKWh": current_today,
             "totalKWh": current_total,
+            "manualTotalBaseKWh": manual_total if has_manual_total else None,
             "lastSolarWatts": solar_watts,
             "lastUpdatedAt": now.isoformat(),
         }
     )
     _save_energy_state(state)
-    return current_today, current_total
+    return current_today, current_total, has_manual_total
 
 
 async def main():
@@ -199,6 +208,17 @@ async def main():
         except Exception:
             today_kwh = None
 
+        api_statistics_total = None
+        try:
+            energy_stats = await client.energy_statistics(
+                siteId=site_id,
+                rangeType="year",
+                sourceType="solar",
+            )
+            api_statistics_total = _energy_total(energy_stats.get("statistics"))
+        except Exception:
+            api_statistics_total = None
+
         battery_watts = _signed_battery_watts(solarbank_info, solarbank, first_solarbank)
         now = datetime.now(timezone.utc)
         solar_watts = _as_int(
@@ -209,12 +229,13 @@ async def main():
             site.get("photovoltaic_power"),
             site.get("pv_power"),
         )
-        local_today_kwh, local_total_kwh = _local_energy_totals(solar_watts, now)
-        api_today_kwh = _first_number(today_kwh, site.get("today_energy"), site.get("energy_today"))
-        api_total_kwh = _first_number(
+        local_today_kwh, local_total_kwh, has_manual_total = _local_energy_totals(solar_watts, now)
+        api_today_kwh = _first_positive_number(today_kwh, site.get("today_energy"), site.get("energy_today"))
+        api_total_kwh = _first_positive_number(
             site.get("total_energy"),
             site.get("energy_total"),
             _energy_total(site.get("statistics")),
+            api_statistics_total,
         )
 
         snapshot = {
@@ -246,7 +267,7 @@ async def main():
             "gridWatts": _signed_grid_watts(site),
             "batteryWatts": battery_watts,
             "todayKWh": max(api_today_kwh or 0, local_today_kwh),
-            "totalKWh": max(api_total_kwh or 0, local_total_kwh),
+            "totalKWh": api_total_kwh if api_total_kwh is not None else (local_total_kwh if has_manual_total else None),
             "status": site.get("status_desc") or solarbank.get("status_desc") or site.get("status") or solarbank.get("status") or "Online",
             "updatedAt": now.isoformat(),
         }

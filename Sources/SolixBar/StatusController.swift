@@ -277,11 +277,8 @@ final class StatusController: NSObject {
             return nil
         }
 
-        let copy = image.copy() as? NSImage ?? image
         let size = round(18 * settings.menuBarScale)
-        copy.size = NSSize(width: size, height: size)
-        copy.isTemplate = false
-        return copy
+        return roundedIconImage(image, size: size)
     }
 
     private func setStatusTitle(_ title: String) {

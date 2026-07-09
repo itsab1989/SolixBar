@@ -278,7 +278,7 @@ private final class DetachedMenuBarView: NSView {
 
         if let attributedText, attributedText.length > 0 {
             let label = NSTextField(labelWithString: "")
-            label.attributedStringValue = attributedText
+            label.attributedStringValue = readableDetachedText(attributedText)
             label.lineBreakMode = .byTruncatingTail
             label.maximumNumberOfLines = 1
             label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -338,8 +338,24 @@ private final class DetachedMenuBarView: NSView {
         let image = Bundle.main.url(forResource: "SolixBar", withExtension: "png")
             .flatMap { NSImage(contentsOf: $0) }
         let size = round(24 * settings.detachedMenuBarScale)
-        image?.size = NSSize(width: size, height: size)
-        return image
+        return image.map { roundedIconImage($0, size: size) }
+    }
+
+    private func readableDetachedText(_ attributedText: NSAttributedString) -> NSAttributedString {
+        let result = NSMutableAttributedString(attributedString: attributedText)
+        let darkText = NSColor(calibratedRed: 0.10, green: 0.13, blue: 0.12, alpha: 1)
+        let mutedText = NSColor(calibratedRed: 0.36, green: 0.42, blue: 0.39, alpha: 1)
+        result.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: result.length)) { value, range, _ in
+            guard let color = value as? NSColor else {
+                result.addAttribute(.foregroundColor, value: darkText, range: range)
+                return
+            }
+            if color == NSColor.labelColor || color == NSColor.secondaryLabelColor || color.isNearlyWhite {
+                let substring = (result.string as NSString).substring(with: range)
+                result.addAttribute(.foregroundColor, value: substring.trimmingCharacters(in: .whitespaces) == "•" ? mutedText : darkText, range: range)
+            }
+        }
+        return result
     }
 
     @objc private func close() {
@@ -419,5 +435,12 @@ private final class AccentGradientView: NSView {
     private var gradientLocations: [NSNumber] {
         guard gradientColors.count > 1 else { return [0, 1] }
         return (0..<gradientColors.count).map { NSNumber(value: Double($0) / Double(gradientColors.count - 1)) }
+    }
+}
+
+private extension NSColor {
+    var isNearlyWhite: Bool {
+        guard let rgb = usingColorSpace(.deviceRGB) else { return false }
+        return rgb.redComponent > 0.82 && rgb.greenComponent > 0.82 && rgb.blueComponent > 0.82
     }
 }

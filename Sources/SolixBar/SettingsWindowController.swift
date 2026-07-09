@@ -98,7 +98,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixTodayBaseField.placeholderString = "z.B. 7.2"
         solixTodayBaseField.toolTip = "Optionaler Korrekturwert fuer den heutigen Ertrag in kWh, falls Anker heute 0 kWh meldet. SolixBar zaehlt ab diesem Wert weiter."
         solixTotalBaseField.placeholderString = "z.B. 427.8"
-        solixTotalBaseField.toolTip = "Optionaler kumulierter Gesamtertrag aus der Anker-App in kWh. SolixBar zaehlt ab diesem Wert weiter."
+        solixTotalBaseField.toolTip = "Kumulierter Gesamtertrag aus der Anker-App in kWh. Wichtig, falls die SOLIX API keinen Gesamtwert liefert."
 
         for textField in [commandField, urlField, intervalField, solixEmailField, solixPasswordField, solixCountryField, solixTodayBaseField, solixTotalBaseField] {
             textField.delegate = self
@@ -527,7 +527,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         case "Ertrag heute", "Yield today":
             return "Korrigiert den heutigen Ertrag in kWh, wenn Anker fuer heute 0 kWh liefert."
         case "Gesamtertrag", "Total yield":
-            return "Setzt den kumulierten Gesamtertrag aus der Anker-App als Startwert."
+            return "Setzt den kumulierten Gesamtertrag aus der Anker-App als Startwert. Ohne API-Gesamtwert bleibt Gesamt sonst leer."
         case "Befehl", "Command":
             return "Der lokale Befehl muss ein JSON-Objekt ausgeben."
         case "URL":
