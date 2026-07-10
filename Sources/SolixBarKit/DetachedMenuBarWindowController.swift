@@ -353,15 +353,17 @@ private final class DetachedMenuBarView: NSView {
         return image.map { roundedIconImage($0, size: size) }
     }
 
+    /// Loest Farben ueber das semantische Rollen-Attribut (.solixRole) auf,
+    /// das die Menueleisten-Formatierung an jeden Lauf haengt — frueher wurde
+    /// hier der gerenderte Text nach Schluesselwoertern durchsucht, was bei
+    /// jeder Textaenderung brach.
     private func readableDetachedText(_ attributedText: NSAttributedString) -> NSAttributedString {
         let result = NSMutableAttributedString(attributedString: attributedText)
-        let brightText = NSColor.white
-        let mutedText = NSColor(calibratedWhite: 0.86, alpha: 1)
+        let fullRange = NSRange(location: 0, length: result.length)
         let shadow = NSShadow()
         shadow.shadowColor = NSColor.black.withAlphaComponent(0.92)
         shadow.shadowBlurRadius = 3
         shadow.shadowOffset = NSSize(width: 0, height: -1)
-        let fullRange = NSRange(location: 0, length: result.length)
         result.addAttributes(
             [
                 .shadow: shadow,
@@ -370,179 +372,34 @@ private final class DetachedMenuBarView: NSView {
             ],
             range: fullRange
         )
-        result.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: result.length)) { value, range, _ in
-            let substring = (result.string as NSString).substring(with: range)
-            guard let color = value as? NSColor else {
-                result.addAttribute(.foregroundColor, value: brightText, range: range)
+
+        result.enumerateAttributes(in: fullRange) { attributes, range, _ in
+            let role = (attributes[.solixRole] as? String).flatMap(ColorRole.init(rawValue:))
+            if let attachment = attributes[.attachment] as? NSTextAttachment, let image = attachment.image {
+                let tinted = image.copy() as? NSImage ?? image
+                tinted.isTemplate = false
+                tinted.lockFocus()
+                Theme.bright(role ?? .neutral).set()
+                NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
+                tinted.unlockFocus()
+                let replacement = NSTextAttachment()
+                replacement.image = tinted
+                replacement.bounds = attachment.bounds
+                result.addAttribute(.attachment, value: replacement, range: range)
                 return
             }
-            if color == NSColor.labelColor || color == NSColor.secondaryLabelColor || color.isNearlyWhite {
-                result.addAttribute(.foregroundColor, value: substring.trimmingCharacters(in: .whitespaces) == "•" ? mutedText : brightText, range: range)
+            let substring = (result.string as NSString).substring(with: range)
+            let color: NSColor
+            if let role {
+                color = Theme.bright(role)
+            } else if substring.trimmingCharacters(in: .whitespaces) == "•" {
+                color = NSColor(calibratedWhite: 0.86, alpha: 1)
             } else {
-                result.addAttribute(.foregroundColor, value: brightDetachedColor(for: color, text: substring), range: range)
+                color = .white
             }
+            result.addAttribute(.foregroundColor, value: color, range: range)
         }
-        makeAttachmentsReadable(in: result)
         return result
-    }
-
-    private func brightDetachedColor(for color: NSColor, text: String) -> NSColor {
-        let normalized = text.lowercased()
-        if normalized.contains("einspeis") || normalized.contains("export") {
-            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
-        }
-        if normalized.contains("bezug") || normalized.contains("import") || normalized.contains("last") || normalized.contains("home") {
-            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
-        }
-        if normalized.contains("entladen") || normalized.contains("discharging") {
-            return NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
-        }
-        if normalized.contains("laden") || normalized.contains("charging") {
-            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        }
-        if normalized.contains("erzeugt") || normalized.contains("producing") || normalized.contains("pv") || normalized.contains("solar") {
-            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-        }
-        if normalized.contains("akku"), let percent = percentage(in: normalized) {
-            if percent <= 20 {
-                return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
-            }
-            if percent <= 60 {
-                return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-            }
-            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        }
-
-        guard let rgb = color.usingColorSpace(.deviceRGB) else { return NSColor.white }
-        var hue: CGFloat = 0
-        var saturation: CGFloat = 0
-        var brightness: CGFloat = 0
-        var alpha: CGFloat = 0
-        rgb.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-        if saturation < 0.16 { return NSColor.white }
-        switch hue {
-        case 0..<0.05, 0.95...1:
-            return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
-        case 0.05..<0.12:
-            return NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
-        case 0.12..<0.20:
-            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-        case 0.20..<0.48:
-            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        case 0.48..<0.72:
-            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
-        default:
-            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
-        }
-    }
-
-    private func percentage(in text: String) -> Int? {
-        let digits = text.split { !$0.isNumber }
-        return digits.compactMap { Int($0) }.first
-    }
-
-    private func makeAttachmentsReadable(in text: NSMutableAttributedString) {
-        var replacements: [(NSRange, NSTextAttachment)] = []
-        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
-            guard let attachment = value as? NSTextAttachment, let image = attachment.image else { return }
-            let readableImage = image.copy() as? NSImage ?? image
-            readableImage.isTemplate = false
-            let beforeStart = max(0, range.location - 32)
-            let beforeRange = NSRange(location: beforeStart, length: range.location - beforeStart)
-            let afterEnd = min(text.length, NSMaxRange(range) + 32)
-            let afterRange = NSRange(location: NSMaxRange(range), length: afterEnd - NSMaxRange(range))
-            let before = (text.string as NSString).substring(with: beforeRange)
-            let after = (text.string as NSString).substring(with: afterRange)
-            let tint = brightAttachmentColor(
-                description: image.accessibilityDescription ?? "",
-                before: before,
-                after: after
-            )
-            readableImage.lockFocus()
-            tint.set()
-            NSRect(origin: .zero, size: readableImage.size).fill(using: .sourceAtop)
-            readableImage.unlockFocus()
-            let replacement = NSTextAttachment()
-            replacement.image = readableImage
-            replacement.bounds = attachment.bounds
-            replacements.append((range, replacement))
-        }
-        for (range, attachment) in replacements {
-            text.addAttribute(.attachment, value: attachment, range: range)
-        }
-    }
-
-    private func brightAttachmentColor(description: String, before: String, after: String) -> NSColor {
-        let description = description.lowercased()
-        let before = before.lowercased()
-        let after = after.lowercased()
-        let context = before + " " + after
-        if after.contains("akku") || after.contains("battery") || after.contains("batt") {
-            if let percent = percentage(in: after) {
-                if percent <= 20 {
-                    return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
-                }
-                if percent <= 60 {
-                    return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-                }
-            }
-            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        }
-        if after.contains("pv") || after.contains("solar") {
-            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-        }
-        if after.contains("last") || after.contains("home") || after.contains("haus") {
-            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
-        }
-        if after.contains("netz") || after.contains("grid") {
-            return before.contains("einspeis") || before.contains("export")
-                ? NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
-                : NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
-        }
-        if after.contains("fluss") || after.contains("flow") {
-            return before.contains("entladen") || before.contains("discharging")
-                ? NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
-                : NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        }
-        if after.contains("ertrag") || after.contains("yield") || after.contains("gesamt") || after.contains("total") {
-            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
-        }
-        if description.contains("battery") || description.contains("batterie") || description.contains("akku") {
-            if description.contains("flow") || description.contains("fluss") {
-                return context.contains("entladen") || context.contains("discharging")
-                    ? NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
-                    : NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-            }
-            if let percent = percentage(in: context) {
-                if percent <= 20 {
-                    return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
-                }
-                if percent <= 60 {
-                    return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-                }
-            }
-            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        }
-        if description.contains("pv") || description.contains("solar") {
-            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
-        }
-        if description.contains("home") || description.contains("haus") || description.contains("last") {
-            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
-        }
-        if description.contains("grid") || description.contains("netz") {
-            return context.contains("einspeis") || context.contains("export")
-                ? NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
-                : NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
-        }
-        if description.contains("flow") || description.contains("fluss") {
-            return context.contains("entladen") || context.contains("discharging")
-                ? NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
-                : NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
-        }
-        if description.contains("yield") || description.contains("ertrag") {
-            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
-        }
-        return NSColor.white
     }
 
     @objc private func close() {
