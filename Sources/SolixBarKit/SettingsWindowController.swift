@@ -729,15 +729,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
     private var solixHelperCommand: String {
-        "/Users/holger/Documents/Codex/2026-07-06/bi/scripts/run_solix_snapshot.sh"
-    }
-
-    private var solixEnvURL: URL {
-        URL(fileURLWithPath: "/Users/holger/Documents/Codex/2026-07-06/bi/work/solixbar.env")
+        SolixPaths.helperCommand() ?? ""
     }
 
     private func loadSolixCredentials() {
-        let values = readSolixEnv()
+        let values = SolixEnvFile.read(from: SolixPaths.envFileURL)
         solixEmailField.stringValue = values["ANKER_SOLIX_USER"] ?? ""
         solixPasswordField.stringValue = values["ANKER_SOLIX_PASSWORD"] ?? ""
         solixCountryField.stringValue = values["ANKER_SOLIX_COUNTRY"] ?? "DE"
@@ -755,43 +751,24 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let todayBase = solixTodayBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         let totalBase = solixTotalBaseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        var lines = [
-            "ANKER_SOLIX_USER=\(shellQuoted(email))",
-            "ANKER_SOLIX_PASSWORD=\(shellQuoted(password))",
-            "ANKER_SOLIX_COUNTRY=\(shellQuoted(country))"
+        var values: [(key: String, value: String)] = [
+            ("ANKER_SOLIX_USER", email),
+            ("ANKER_SOLIX_PASSWORD", password),
+            ("ANKER_SOLIX_COUNTRY", country)
         ]
         if !todayBase.isEmpty {
-            lines.append("SOLIXBAR_TODAY_KWH_BASE=\(shellQuoted(todayBase.replacingOccurrences(of: ",", with: ".")))")
-            lines.append("SOLIXBAR_TODAY_KWH_DATE=\(shellQuoted(Self.todayKey()))")
+            values.append(("SOLIXBAR_TODAY_KWH_BASE", todayBase.replacingOccurrences(of: ",", with: ".")))
+            values.append(("SOLIXBAR_TODAY_KWH_DATE", Self.todayKey()))
         }
         if !totalBase.isEmpty {
-            lines.append("SOLIXBAR_TOTAL_KWH_BASE=\(shellQuoted(totalBase.replacingOccurrences(of: ",", with: ".")))")
+            values.append(("SOLIXBAR_TOTAL_KWH_BASE", totalBase.replacingOccurrences(of: ",", with: ".")))
         }
-        let text = lines.joined(separator: "\n") + "\n"
 
         do {
-            try FileManager.default.createDirectory(at: solixEnvURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try text.write(to: solixEnvURL, atomically: true, encoding: .utf8)
+            try SolixEnvFile.write(values, to: SolixPaths.envFileURL)
         } catch {
             NSAlert(error: error).runModal()
         }
-    }
-
-    private func readSolixEnv() -> [String: String] {
-        guard let text = try? String(contentsOf: solixEnvURL, encoding: .utf8) else { return [:] }
-        var values: [String: String] = [:]
-        for rawLine in text.components(separatedBy: .newlines) {
-            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !line.isEmpty, !line.hasPrefix("#"), let equals = line.firstIndex(of: "=") else { continue }
-            let key = String(line[..<equals])
-            let value = String(line[line.index(after: equals)...])
-            values[key] = unquoteShellValue(value)
-        }
-        return values
-    }
-
-    private func shellQuoted(_ value: String) -> String {
-        "'\(value.replacingOccurrences(of: "'", with: "'\\''"))'"
     }
 
     private static func todayKey() -> String {
@@ -800,19 +777,5 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
-    }
-
-    private func unquoteShellValue(_ value: String) -> String {
-        var value = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.hasPrefix("'"), value.hasSuffix("'"), value.count >= 2 {
-            value.removeFirst()
-            value.removeLast()
-            return value.replacingOccurrences(of: "'\\''", with: "'")
-        }
-        if value.hasPrefix("\""), value.hasSuffix("\""), value.count >= 2 {
-            value.removeFirst()
-            value.removeLast()
-        }
-        return value
     }
 }

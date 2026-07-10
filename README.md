@@ -93,10 +93,10 @@ Anker stellt keine stabile oeffentliche SOLIX API bereit. Dieses Projekt enthael
 
 English: Anker does not provide a stable public SOLIX API. This project includes a helper script prepared for the unofficial community library `thomluther/anker-solix-api`.
 
-Empfohlener lokaler Befehl fuer SolixBar. / Recommended local command for SolixBar:
+Empfohlener lokaler Befehl fuer SolixBar (wird von der App automatisch vorgeschlagen; das Script liegt im Repo und in der gepackten App). / Recommended local command (suggested automatically by the app; the script ships in the repo and the packaged app):
 
 ```bash
-/Users/holger/Documents/Codex/2026-07-06/bi/scripts/run_solix_snapshot.sh
+scripts/run_solix_snapshot.sh
 ```
 
 Die App kann die lokale ignorierte Zugangsdaten-Datei fuer dich erstellen. Oeffne
