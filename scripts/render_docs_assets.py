@@ -233,10 +233,13 @@ def render_detached():
     paste_icon(base, (170, 348, 222, 400))
     text(d, (250, 362), "Akku 88%", (125, 255, 153), F["menu"])
     text(d, (455, 362), "↓", (125, 255, 153), F["menu"])
-    text(d, (510, 362), "PV 496 W", (255, 217, 77), F["menu"])
-    text(d, (750, 362), "Hauslast 352 W", (117, 219, 255), F["menu"])
-    text(d, (1080, 362), "Netz → 86 W", (214, 176, 255), F["menu"])
-    text(d, (1388, 362), "×", (255, 255, 255), F["h3"])
+    d.ellipse((510, 367, 534, 391), fill=(255, 217, 77))
+    text(d, (550, 362), "PV 496 W", (255, 217, 77), F["menu"])
+    d.rounded_rectangle((790, 367, 814, 391), radius=5, fill=(117, 219, 255))
+    text(d, (830, 362), "Hauslast 352 W", (117, 219, 255), F["menu"])
+    d.ellipse((1145, 367, 1169, 391), fill=(214, 176, 255))
+    text(d, (1185, 362), "Netz → 86 W", (214, 176, 255), F["menu"])
+    text(d, (1445, 362), "×", (255, 255, 255), F["h3"])
     save(base, "detached-bar-shot.png")
 
 

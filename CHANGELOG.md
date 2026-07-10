@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.18 - 2026-07-10
+
+- DE: Sonne, Haus, Akku, Netz und Fluss-Symbol in der abgedockten Leiste sind wieder farbig. Sie verwenden jetzt dieselben festen hellen Semantikfarben wie die zugehoerigen Texte und bleiben dadurch auf dem dunklen Glas-Hintergrund lesbar.
+- EN: Solar, home, battery, grid, and flow symbols in the detached bar are colored again. They now use the same fixed bright semantic colors as their associated text, keeping them readable on the dark glass background.
+- DE: Fluss-Symbole wechseln weiterhin passend zwischen Gruen beim Laden, Orange beim Entladen, Cyan beim Netzbezug und Violett beim Einspeisen.
+- EN: Flow symbols continue to switch appropriately between green for charging, orange for discharging, cyan for grid import, and purple for grid export.
+
 ## 0.3.17 - 2026-07-10
 
 - DE: Die abgedockte Leiste verwendet auf ihrem immer dunklen Glas-Hintergrund jetzt feste helle Hochkontrastfarben fuer Akku, Solar, Hauslast, Netzbezug, Einspeisung sowie Laden und Entladen. Ein staerkerer Schatten und eine dunkle Kontur halten die Texte auch ueber dem farbigen Verlauf lesbar.

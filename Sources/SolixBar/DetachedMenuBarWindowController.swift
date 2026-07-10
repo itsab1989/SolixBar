@@ -435,8 +435,16 @@ private final class DetachedMenuBarView: NSView {
             guard let attachment = value as? NSTextAttachment, let image = attachment.image else { return }
             let readableImage = image.copy() as? NSImage ?? image
             readableImage.isTemplate = false
+            let contextStart = max(0, range.location - 36)
+            let contextEnd = min(text.length, NSMaxRange(range) + 36)
+            let contextRange = NSRange(location: contextStart, length: contextEnd - contextStart)
+            let context = (text.string as NSString).substring(with: contextRange)
+            let tint = brightAttachmentColor(
+                description: image.accessibilityDescription ?? "",
+                context: context
+            )
             readableImage.lockFocus()
-            NSColor.white.set()
+            tint.set()
             NSRect(origin: .zero, size: readableImage.size).fill(using: .sourceAtop)
             readableImage.unlockFocus()
             let replacement = NSTextAttachment()
@@ -447,6 +455,47 @@ private final class DetachedMenuBarView: NSView {
         for (range, attachment) in replacements {
             text.addAttribute(.attachment, value: attachment, range: range)
         }
+    }
+
+    private func brightAttachmentColor(description: String, context: String) -> NSColor {
+        let description = description.lowercased()
+        let context = context.lowercased()
+        if description.contains("battery") || description.contains("batterie") || description.contains("akku") {
+            if description.contains("flow") || description.contains("fluss") {
+                return context.contains("entladen") || context.contains("discharging")
+                    ? NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
+                    : NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+            }
+            if let percent = percentage(in: context) {
+                if percent <= 20 {
+                    return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
+                }
+                if percent <= 60 {
+                    return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+                }
+            }
+            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        }
+        if description.contains("pv") || description.contains("solar") {
+            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+        }
+        if description.contains("home") || description.contains("haus") || description.contains("last") {
+            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
+        }
+        if description.contains("grid") || description.contains("netz") {
+            return context.contains("einspeis") || context.contains("export")
+                ? NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
+                : NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
+        }
+        if description.contains("flow") || description.contains("fluss") {
+            return context.contains("entladen") || context.contains("discharging")
+                ? NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
+                : NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        }
+        if description.contains("yield") || description.contains("ertrag") {
+            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
+        }
+        return NSColor.white
     }
 
     @objc private func close() {
