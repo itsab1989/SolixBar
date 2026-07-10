@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.17 - 2026-07-10
+
+- DE: Die abgedockte Leiste verwendet auf ihrem immer dunklen Glas-Hintergrund jetzt feste helle Hochkontrastfarben fuer Akku, Solar, Hauslast, Netzbezug, Einspeisung sowie Laden und Entladen. Ein staerkerer Schatten und eine dunkle Kontur halten die Texte auch ueber dem farbigen Verlauf lesbar.
+- EN: The detached slim bar now uses fixed bright high-contrast colors for battery, solar, home load, grid import, grid export, charging, and discharging on its always-dark glass background. A stronger shadow and dark outline keep text readable over the colored gradient.
+- DE: Eingefaerbte Symbole werden in der abgedockten Leiste hell dargestellt, damit sie nicht mehr mit dem Hintergrund verschmelzen.
+- EN: Colored symbols are rendered bright in the detached bar so they no longer blend into the background.
+
 ## 0.3.16 - 2026-07-10
 
 - DE: Die Menueleistenfarben richten sich jetzt nach der tatsaechlich von macOS aufgeloesten Menueleisten-Textfarbe statt nur nach dem allgemeinen Hell-/Dunkelmodus. Dadurch bleiben Akku-, Fluss- und Aktualisierungsfarben auch auf wallpaper-abhaengigen, transparenten und vibrierenden Menueleisten lesbar.

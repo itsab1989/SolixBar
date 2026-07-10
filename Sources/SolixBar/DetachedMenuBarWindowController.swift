@@ -346,21 +346,107 @@ private final class DetachedMenuBarView: NSView {
         let brightText = NSColor.white
         let mutedText = NSColor(calibratedWhite: 0.86, alpha: 1)
         let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.72)
-        shadow.shadowBlurRadius = 2
+        shadow.shadowColor = NSColor.black.withAlphaComponent(0.92)
+        shadow.shadowBlurRadius = 3
         shadow.shadowOffset = NSSize(width: 0, height: -1)
-        result.addAttribute(.shadow, value: shadow, range: NSRange(location: 0, length: result.length))
+        let fullRange = NSRange(location: 0, length: result.length)
+        result.addAttributes(
+            [
+                .shadow: shadow,
+                .strokeColor: NSColor.black.withAlphaComponent(0.70),
+                .strokeWidth: -1.5
+            ],
+            range: fullRange
+        )
         result.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: result.length)) { value, range, _ in
+            let substring = (result.string as NSString).substring(with: range)
             guard let color = value as? NSColor else {
                 result.addAttribute(.foregroundColor, value: brightText, range: range)
                 return
             }
             if color == NSColor.labelColor || color == NSColor.secondaryLabelColor || color.isNearlyWhite {
-                let substring = (result.string as NSString).substring(with: range)
                 result.addAttribute(.foregroundColor, value: substring.trimmingCharacters(in: .whitespaces) == "•" ? mutedText : brightText, range: range)
+            } else {
+                result.addAttribute(.foregroundColor, value: brightDetachedColor(for: color, text: substring), range: range)
             }
         }
+        makeAttachmentsReadable(in: result)
         return result
+    }
+
+    private func brightDetachedColor(for color: NSColor, text: String) -> NSColor {
+        let normalized = text.lowercased()
+        if normalized.contains("einspeis") || normalized.contains("export") {
+            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
+        }
+        if normalized.contains("bezug") || normalized.contains("import") || normalized.contains("last") || normalized.contains("home") {
+            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
+        }
+        if normalized.contains("entladen") || normalized.contains("discharging") {
+            return NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
+        }
+        if normalized.contains("laden") || normalized.contains("charging") {
+            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        }
+        if normalized.contains("erzeugt") || normalized.contains("producing") || normalized.contains("pv") || normalized.contains("solar") {
+            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+        }
+        if normalized.contains("akku"), let percent = percentage(in: normalized) {
+            if percent <= 20 {
+                return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
+            }
+            if percent <= 60 {
+                return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+            }
+            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        }
+
+        guard let rgb = color.usingColorSpace(.deviceRGB) else { return NSColor.white }
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+        rgb.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+        if saturation < 0.16 { return NSColor.white }
+        switch hue {
+        case 0..<0.05, 0.95...1:
+            return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.46, alpha: 1)
+        case 0.05..<0.12:
+            return NSColor(calibratedRed: 1.00, green: 0.58, blue: 0.36, alpha: 1)
+        case 0.12..<0.20:
+            return NSColor(calibratedRed: 1.00, green: 0.85, blue: 0.30, alpha: 1)
+        case 0.20..<0.48:
+            return NSColor(calibratedRed: 0.49, green: 1.00, blue: 0.60, alpha: 1)
+        case 0.48..<0.72:
+            return NSColor(calibratedRed: 0.46, green: 0.86, blue: 1.00, alpha: 1)
+        default:
+            return NSColor(calibratedRed: 0.84, green: 0.69, blue: 1.00, alpha: 1)
+        }
+    }
+
+    private func percentage(in text: String) -> Int? {
+        let digits = text.split { !$0.isNumber }
+        return digits.compactMap { Int($0) }.first
+    }
+
+    private func makeAttachmentsReadable(in text: NSMutableAttributedString) {
+        var replacements: [(NSRange, NSTextAttachment)] = []
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment, let image = attachment.image else { return }
+            let readableImage = image.copy() as? NSImage ?? image
+            readableImage.isTemplate = false
+            readableImage.lockFocus()
+            NSColor.white.set()
+            NSRect(origin: .zero, size: readableImage.size).fill(using: .sourceAtop)
+            readableImage.unlockFocus()
+            let replacement = NSTextAttachment()
+            replacement.image = readableImage
+            replacement.bounds = attachment.bounds
+            replacements.append((range, replacement))
+        }
+        for (range, attachment) in replacements {
+            text.addAttribute(.attachment, value: attachment, range: range)
+        }
     }
 
     @objc private func close() {
