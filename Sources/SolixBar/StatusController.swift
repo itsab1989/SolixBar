@@ -1,21 +1,5 @@
 import AppKit
 
-private func menuBarUsesDarkBackground(_ appearance: NSAppearance) -> Bool {
-    var label: NSColor?
-    appearance.performAsCurrentDrawingAppearance {
-        label = NSColor.labelColor.usingColorSpace(.deviceRGB)
-    }
-    if let label {
-        let luminance = 0.2126 * label.redComponent
-            + 0.7152 * label.greenComponent
-            + 0.0722 * label.blueComponent
-        return luminance > 0.55
-    }
-
-    let match = appearance.bestMatch(from: [.vibrantDark, .darkAqua, .vibrantLight, .aqua])
-    return match == .vibrantDark || match == .darkAqua
-}
-
 @MainActor
 final class StatusController: NSObject {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -417,25 +401,29 @@ final class StatusController: NSObject {
     }
 
     private func color(for metric: BarMetric, snapshot: SolixSnapshot) -> NSColor {
+        Theme.color(roleTag(for: metric, snapshot: snapshot))
+    }
+
+    private func roleTag(for metric: BarMetric, snapshot: SolixSnapshot) -> ColorRole {
         switch metric {
         case .battery:
-            batteryColor(snapshot.batteryPercent)
+            Theme.battery(percent: snapshot.batteryPercent)
         case .solar:
-            solarColor
+            .solar
         case .home:
-            homeConsumptionColor
+            .load
         case .grid:
-            gridColor(snapshot.gridWatts)
+            Theme.grid(watts: snapshot.gridWatts)
         case .batteryFlow:
-            batteryFlowColor(snapshot.batteryWatts)
+            Theme.batteryFlow(watts: snapshot.batteryWatts)
         case .flow:
-            .systemGreen
+            .batteryCharging
         case .today:
-            .systemGreen
+            .yieldToday
         case .total:
-            .systemPurple
+            .yieldTotal
         case .status:
-            .systemGreen
+            .status
         }
     }
 
@@ -750,98 +738,27 @@ final class StatusController: NSObject {
         )
     }
 
-    private var solarFlowColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.48, 0.22, 0.00),
-            dark: (1.00, 0.82, 0.30)
-        )
-    }
-
-    private var homeConsumptionColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.00, 0.20, 0.80),
-            dark: (0.40, 0.88, 1.00)
-        )
-    }
-
-    private var batteryChargingColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.00, 0.36, 0.12),
-            dark: (0.42, 1.00, 0.58)
-        )
-    }
-
-    private var batteryDischargingColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.55, 0.12, 0.00),
-            dark: (1.00, 0.55, 0.32)
-        )
-    }
-
-    private var gridImportColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.00, 0.20, 0.80),
-            dark: (0.40, 0.88, 1.00)
-        )
-    }
-
-    private var gridExportColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.34, 0.10, 0.58),
-            dark: (0.82, 0.65, 1.00)
-        )
-    }
-
-    private var refreshColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.00, 0.20, 0.80),
-            dark: (0.40, 0.88, 1.00)
-        )
-    }
-
-    private var batteryLowColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.69, 0.00, 0.13),
-            dark: (1.00, 0.42, 0.46)
-        )
-    }
-
-    private var batteryMediumColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.54, 0.35, 0.00),
-            dark: (1.00, 0.85, 0.30)
-        )
-    }
-
-    private var batteryHighColor: NSColor {
-        adaptiveFlowColor(
-            light: (0.00, 0.36, 0.12),
-            dark: (0.42, 1.00, 0.58)
-        )
-    }
+    private var solarFlowColor: NSColor { Theme.color(.solar) }
+    private var homeConsumptionColor: NSColor { Theme.color(.load) }
+    private var batteryChargingColor: NSColor { Theme.color(.batteryCharging) }
+    private var batteryDischargingColor: NSColor { Theme.color(.batteryDischarging) }
+    private var gridImportColor: NSColor { Theme.color(.gridImport) }
+    private var gridExportColor: NSColor { Theme.color(.gridExport) }
+    private var refreshColor: NSColor { Theme.color(.refresh) }
+    private var batteryLowColor: NSColor { Theme.color(.batteryLow) }
+    private var batteryMediumColor: NSColor { Theme.color(.batteryMedium) }
+    private var batteryHighColor: NSColor { Theme.color(.batteryHigh) }
 
     private var menuBarTextShadow: NSShadow {
         let shadow = NSShadow()
         shadow.shadowColor = NSColor(name: nil) { appearance in
-            menuBarUsesDarkBackground(appearance)
+            Theme.usesDarkBackground(appearance)
                 ? NSColor.black.withAlphaComponent(0.85)
                 : NSColor.white.withAlphaComponent(0.90)
         }
         shadow.shadowBlurRadius = 1.5
         shadow.shadowOffset = NSSize(width: 0, height: -0.5)
         return shadow
-    }
-
-    private func adaptiveFlowColor(light: (CGFloat, CGFloat, CGFloat), dark: (CGFloat, CGFloat, CGFloat)) -> NSColor {
-        NSColor(name: nil) { appearance in
-            let components = menuBarUsesDarkBackground(appearance) ? dark : light
-            return NSColor(
-                calibratedRed: components.0,
-                green: components.1,
-                blue: components.2,
-                alpha: 1
-            )
-        }
     }
 
     private func storageColor(_ watts: Int) -> NSColor {
