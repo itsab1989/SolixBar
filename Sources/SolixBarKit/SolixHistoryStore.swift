@@ -5,6 +5,10 @@ struct SolixHistorySample: Codable, Sendable {
     var batteryPercent: Int?
     var solarWatts: Int?
     var gridWatts: Int?
+    // Seit 0.4.2 mitgeschrieben (für den Datenexport); ältere Dateien haben
+    // die Felder nicht — Optionals decodieren dann als nil.
+    var homeWatts: Int?
+    var batteryWatts: Int?
 }
 
 private struct SolixEnergyAccumulator: Codable {
@@ -71,7 +75,9 @@ final class SolixHistoryStore {
                 date: snapshot.updatedAt,
                 batteryPercent: snapshot.batteryPercent,
                 solarWatts: snapshot.solarWatts,
-                gridWatts: snapshot.gridWatts
+                gridWatts: snapshot.gridWatts,
+                homeWatts: snapshot.homeWatts,
+                batteryWatts: snapshot.batteryWatts
             )
         )
         file.samples[sourceKey] = pruned(samples, from: Date(), refreshInterval: refreshInterval)

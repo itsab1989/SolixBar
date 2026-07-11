@@ -121,6 +121,40 @@ struct HistoryStoreTests {
         #expect(fresh.count == 2)
     }
 
+    @Test("reads pre-0.4.2 history files without home/battery fields")
+    func decodesLegacySampleFormat() throws {
+        // Wörtliches Alt-Format (v1, nur battery/solar/grid) — darf nie brechen.
+        let legacyJSON = """
+        {"version":1,"samples":{"url":[{"date":1752000000,"batteryPercent":73,"solarWatts":410,"gridWatts":-20}]}}
+        """
+        let fileURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("solixbar-history-\(UUID().uuidString).json")
+        try legacyJSON.data(using: .utf8)!.write(to: fileURL)
+        let suite = "solixbar-tests-\(UUID().uuidString)"
+        let store = SolixHistoryStore(defaults: UserDefaults(suiteName: suite)!, fileURL: fileURL)
+        let loaded = store.samples(duration: 366 * 86_400 * 10, sourceKey: "url")
+        #expect(loaded.count == 1)
+        #expect(loaded.first?.solarWatts == 410)
+        #expect(loaded.first?.homeWatts == nil)
+        #expect(loaded.first?.batteryWatts == nil)
+    }
+
+    @Test("records and round-trips home and battery-flow watts")
+    func roundTripsNewFields() {
+        let (store, _) = makeStore()
+        let full = SolixSnapshot(
+            siteName: "Test",
+            solarWatts: 500,
+            homeWatts: 210,
+            batteryWatts: -120,
+            updatedAt: Date()
+        )
+        store.record(full, sourceKey: "url", refreshInterval: 300)
+        let sample = store.samples(duration: 3600, sourceKey: "url").first
+        #expect(sample?.homeWatts == 210)
+        #expect(sample?.batteryWatts == -120)
+    }
+
     @Test("persists across store instances")
     func persistence() {
         let suite = "solixbar-tests-\(UUID().uuidString)"
