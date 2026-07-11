@@ -205,11 +205,6 @@ final class StatusController: NSObject {
             return
         }
 
-        if isMenuBarDetached {
-            setStatusAttributedTitle(detachedMenuBarStatusAttributedTitle())
-            return
-        }
-
         guard let snapshot = currentSnapshot() else {
             let title = lastError == nil ? "SOLIX" : "SOLIX !"
             setStatusTitle(title)
@@ -515,7 +510,7 @@ final class StatusController: NSObject {
     }
 
     private var shouldShowMenuBarIcon: Bool {
-        settings.showMenuBarIcon || isMenuBarDetached
+        settings.showMenuBarIcon
     }
 
     /// Template-Glyph statt herunterskaliertem App-Icon: Das 1,5-MB-PNG war bei
@@ -1139,33 +1134,6 @@ final class StatusController: NSObject {
         updateMenuBarIcon()
         updateTitle()
         rebuildMenu()
-    }
-
-    private func detachedMenuBarStatusAttributedTitle() -> NSAttributedString {
-        let isOnline: Bool
-        if let snapshot = currentSnapshot() {
-            isOnline = snapshot.status?.localizedCaseInsensitiveContains("offline") != true
-        } else {
-            isOnline = lastError == nil
-        }
-
-        let result = NSMutableAttributedString()
-        result.append(NSAttributedString(
-            string: isRefreshing ? "\(refreshIndicator()) " : "● ",
-            attributes: [
-                .font: NSFont.systemFont(ofSize: round(12 * settings.menuBarScale), weight: .bold),
-                .foregroundColor: isRefreshing ? refreshColor : (isOnline ? NSColor.systemGreen : NSColor.systemRed),
-                .shadow: menuBarTextShadow
-            ]
-        ))
-        result.append(NSAttributedString(
-            string: isOnline ? "Online" : "Offline",
-            attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * settings.menuBarScale), weight: .semibold),
-                .foregroundColor: NSColor.labelColor
-            ]
-        ))
-        return result
     }
 
     private func statusButtonFrameOnScreen() -> NSRect? {
