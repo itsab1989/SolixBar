@@ -372,6 +372,10 @@ final class StatusController: NSObject {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(versionItem())
         menu.addItem(action(LocalizedText.text("Beenden", "Quit"), #selector(quit), "power"))
+        // NSMenus folgen NSApp.appearance nicht automatisch: Bei erzwungenem
+        // Hell/Dunkel muss das Menü die Appearance explizit erben, sonst
+        // bleibt das Dropdown im Systemlook.
+        menu.appearance = settings.appearanceMode == .system ? nil : NSApp.appearance
         item.menu = menu
     }
 

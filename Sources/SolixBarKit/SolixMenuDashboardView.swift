@@ -43,7 +43,12 @@ final class SolixMenuDashboardView: NSView {
             layer?.borderWidth = 1
             layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
         }
-        buildView()
+        // cgColor-Auflösung dynamischer Farben folgt sonst der Prozess-
+        // Default-Appearance (hell), nicht der App/Fenster-Appearance —
+        // Ursache der weißen Streifen im Dark Mode.
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            buildView()
+        }
         // Hoehe aus den Constraints ableiten: eine geratene Festhoehe brach
         // das Layout im Menue-Kontext, sobald der Platzbedarf sich aenderte
         // (das abgedockte Fenster hatte Luft, das Dropdown nicht).
@@ -84,8 +89,20 @@ final class SolixMenuDashboardView: NSView {
             color: isDemo ? .systemBlue : statusColor
         )
 
-        let battery = primaryMetricPanel(LocalizedText.text("Akku", "Battery"), snapshot.batteryPercent.map { "\($0) %" }, "battery.100percent", batteryColor)
-        let solar = primaryMetricPanel("Solar", snapshot.solarWatts.map { "\($0) W" }, "sun.max.fill", solarColor)
+        let battery = primaryMetricPanel(
+            LocalizedText.text("Akku", "Battery"),
+            snapshot.batteryPercent.map { "\($0) %" },
+            "battery.100percent",
+            batteryColor,
+            plateColor: Theme.vivid(Theme.battery(percent: snapshot.batteryPercent))
+        )
+        let solar = primaryMetricPanel(
+            "Solar",
+            snapshot.solarWatts.map { "\($0) W" },
+            "sun.max.fill",
+            solarColor,
+            plateColor: Theme.vivid(.solar)
+        )
 
         let primaryRow = NSStackView(views: [battery, solar])
         primaryRow.orientation = .horizontal
@@ -215,7 +232,7 @@ final class SolixMenuDashboardView: NSView {
         return LocalizedText.text("vor \(days) Tagen", "\(days) days ago")
     }
 
-    private func primaryMetricPanel(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor) -> NSView {
+    private func primaryMetricPanel(_ title: String, _ value: String?, _ symbol: String, _ color: NSColor, plateColor: NSColor) -> NSView {
         let panel = AnimatedPanelView()
         panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
@@ -223,7 +240,9 @@ final class SolixMenuDashboardView: NSView {
         panel.baseColor = panelBackground(for: color, strength: 0.22)
         panel.highlightColor = panelBackground(for: color, strength: 0.30)
 
-        let iconPlate = iconPlate(symbol: symbol, color: color, size: 36, pointSize: 21)
+        // Plate mit Leuchtfarbe (vivid): die Textfarbe allein ergab im Dark
+        // Mode einen kontrastarmen Kreis hinter dem Symbol.
+        let iconPlate = iconPlate(symbol: symbol, color: plateColor, size: 36, pointSize: 21)
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 15, weight: .bold)
         titleLabel.textColor = .labelColor

@@ -144,9 +144,32 @@ final class GraphControlHeader: NSView {
     }
 
     func reload() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            reloadChips()
+        }
+    }
+
+    private func reloadChips() {
         for range in HistoryRange.allCases {
             guard let chip = rangeChips[range] else { continue }
-            styleRangeChip(chip, title: range.shortTitle, selected: settings.historyRange == range)
+            // Der Eig.-Chip zeigt den in den Einstellungen gewählten Wert.
+            let title: String
+            if range == .custom, settings.historyRange == .custom {
+                let value = HistoryGraphMenuView.customValue(
+                    days: settings.customHistoryDays,
+                    unit: settings.customHistoryUnit
+                )
+                let unit = switch settings.customHistoryUnit {
+                case "hours": LocalizedText.text("Std.", "h")
+                case "weeks": LocalizedText.text("Wo.", "wk")
+                case "months": LocalizedText.text("Mon.", "mo")
+                default: LocalizedText.text("Tage", "d")
+                }
+                title = "\(value) \(unit)"
+            } else {
+                title = range.shortTitle
+            }
+            styleRangeChip(chip, title: title, selected: settings.historyRange == range)
         }
         let selectedMetrics = Set(settings.graphMetrics)
         for metric in GraphMetric.allCases {

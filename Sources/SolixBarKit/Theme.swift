@@ -142,7 +142,9 @@ enum Theme {
     /// dunkles Glas -> Bright-Palette, helles Glas -> kräftige Lesefarben.
     static func hud(_ role: ColorRole) -> NSColor {
         NSColor(name: nil) { appearance in
-            if usesDarkBackground(appearance) {
+            // Exakt dieselbe Weiche wie der Leisten-Hintergrund (bestMatch),
+            // damit Text- und Hintergrundentscheidung nie auseinanderlaufen.
+            if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
                 return bright(role)
             }
             var resolved = NSColor.labelColor

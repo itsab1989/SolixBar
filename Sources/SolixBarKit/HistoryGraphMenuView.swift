@@ -19,9 +19,11 @@ final class HistoryGraphMenuView: NSView {
         wantsLayer = true
         layer?.cornerRadius = Theme.radiusCard
         layer?.masksToBounds = true
-        layer?.backgroundColor = menuBackground.cgColor
-        buildView()
-        reload()
+        effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
+            layer?.backgroundColor = menuBackground.cgColor
+            buildView()
+            reload()
+        }
     }
 
     required init?(coder: NSCoder) {

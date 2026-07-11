@@ -276,7 +276,9 @@ private final class DetachedMenuBarView: NSView {
         wantsLayer = true
         layer?.cornerRadius = 16
         layer?.masksToBounds = true
-        buildView()
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            buildView()
+        }
     }
 
     required init?(coder: NSCoder) {
