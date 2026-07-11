@@ -6,6 +6,8 @@ final class HistoryGraphView: NSView {
     private let range: HistoryRange
     private let rangeDuration: TimeInterval
     private let visibleMetrics: [GraphMetric]
+    private let showsHeader: Bool
+    private let fitsData: Bool
     private var animationProgress: CGFloat = 0
     private var animationTimer: Timer?
     private let animationStart = Date()
@@ -21,12 +23,16 @@ final class HistoryGraphView: NSView {
         range: HistoryRange = AppSettings.shared.historyRange,
         rangeDuration: TimeInterval = AppSettings.shared.historyDuration,
         visibleMetrics: [GraphMetric] = AppSettings.shared.graphMetrics,
+        showsHeader: Bool = true,
+        fitsData: Bool = AppSettings.shared.graphFitsData,
         size: NSSize = NSSize(width: 320, height: 170)
     ) {
         self.samples = samples.sorted { $0.date < $1.date }
         self.rangeTitle = rangeTitle
         self.range = range
         self.rangeDuration = rangeDuration
+        self.showsHeader = showsHeader
+        self.fitsData = fitsData
         self.visibleMetrics = visibleMetrics.isEmpty ? GraphMetric.allCases : visibleMetrics
         super.init(frame: NSRect(origin: .zero, size: size))
         wantsLayer = true
@@ -65,7 +71,6 @@ final class HistoryGraphView: NSView {
         let maxPower = maxPowerValue()
         drawPlotSurface(in: plot)
         drawGrid(in: plot, maxPower: maxPower)
-        drawAxes(in: plot)
         drawTimeLabels(in: plot)
         // Header/Legende nach der Plotfläche zeichnen, damit sie bei knapper
         // Höhe niemals unter der Fläche verschwinden.
@@ -90,6 +95,9 @@ final class HistoryGraphView: NSView {
         if visibleMetrics.contains(.grid) {
             drawLine(values: animatedPoints(gridPoints(in: plot, maxPower: maxPower)), color: gridColor, width: 3.1, baseline: plot.minY, filled: false)
         }
+        // Grundlinie zuletzt: Kurven auf 0 (z. B. Netz nachts) sollen die
+        // Achse nicht verdecken.
+        drawAxes(in: plot)
     }
 
     private func startLineAnimation() {
@@ -132,6 +140,7 @@ final class HistoryGraphView: NSView {
     }
 
     private func drawHeader() {
+        guard showsHeader else { return }
         drawText(
             "\(LocalizedText.text("Verlauf", "History")) \(localizedRangeTitle(rangeTitle))",
             at: NSPoint(x: 16, y: bounds.maxY - 25),
@@ -274,7 +283,14 @@ final class HistoryGraphView: NSView {
         let now = Date()
         let end = max(samples.last?.date ?? now, now)
         let duration = max(60 * 60, rangeDuration)
-        return (end.addingTimeInterval(-duration), end)
+        var start = end.addingTimeInterval(-duration)
+        // Fit-to-Data: leere Zeiträume nicht anzeigen, wenn die Daten erst
+        // deutlich später beginnen (mindestens 1 h Spannweite behalten).
+        if fitsData, let first = samples.first?.date, first > start {
+            let padded = first.addingTimeInterval(-duration * 0.03)
+            start = min(max(padded, start), end.addingTimeInterval(-60 * 60))
+        }
+        return (start, end)
     }
 
     /// Ticks an runden Uhrzeit-/Tagesgrenzen statt an krummen Bruchteilen der
@@ -282,18 +298,28 @@ final class HistoryGraphView: NSView {
     private func timeTicks(for domain: (start: Date, end: Date)) -> [(date: Date, label: String?, isLast: Bool)] {
         let duration = domain.end.timeIntervalSince(domain.start)
         let step: TimeInterval
-        switch range {
-        case .current:
-            step = 30 * 60
-        case .day:
-            step = bounds.width < 430 ? 6 * 3600 : 4 * 3600
-        case .week:
-            step = 24 * 3600
-        case .month:
-            step = bounds.width < 430 ? 7 * 24 * 3600 : 5 * 24 * 3600
-        case .custom:
-            let days = max(1, (duration / (24 * 3600)).rounded())
-            step = max(1, (days / 6).rounded()) * 24 * 3600
+        if fitsData && duration < rangeDuration * 0.75 {
+            // Gefittete (kürzere) Domäne: Schrittweite aus der echten Dauer.
+            switch duration {
+            case ..<(4 * 3600): step = 30 * 60
+            case ..<(26 * 3600): step = bounds.width < 430 ? 6 * 3600 : 4 * 3600
+            case ..<(8 * 24 * 3600): step = 24 * 3600
+            default: step = max(1, ((duration / (24 * 3600)) / 6).rounded()) * 24 * 3600
+            }
+        } else {
+            switch range {
+            case .current:
+                step = 30 * 60
+            case .day:
+                step = bounds.width < 430 ? 6 * 3600 : 4 * 3600
+            case .week:
+                step = 24 * 3600
+            case .month:
+                step = bounds.width < 430 ? 7 * 24 * 3600 : 5 * 24 * 3600
+            case .custom:
+                let days = max(1, (duration / (24 * 3600)).rounded())
+                step = max(1, (days / 6).rounded()) * 24 * 3600
+            }
         }
 
         var ticks: [(date: Date, label: String?, isLast: Bool)] = []
@@ -326,15 +352,20 @@ final class HistoryGraphView: NSView {
         formatter.locale = Locale(
             identifier: AppSettings.shared.appLanguage == .english ? "en_US" : "de_DE"
         )
-        switch range {
-        case .current, .day:
+        let effectiveDuration = timeDomain().end.timeIntervalSince(timeDomain().start)
+        if fitsData && effectiveDuration < 26 * 3600 {
             formatter.dateFormat = "HH:mm"
-        case .week:
-            formatter.dateFormat = "dd.MM"
-        case .month:
-            formatter.dateFormat = "dd.MM"
-        case .custom:
-            formatter.dateFormat = rangeDuration <= 35 * 24 * 60 * 60 ? "dd.MM" : "MM/yy"
+        } else {
+            switch range {
+            case .current, .day:
+                formatter.dateFormat = "HH:mm"
+            case .week:
+                formatter.dateFormat = "dd.MM"
+            case .month:
+                formatter.dateFormat = "dd.MM"
+            case .custom:
+                formatter.dateFormat = rangeDuration <= 35 * 24 * 60 * 60 ? "dd.MM" : "MM/yy"
+            }
         }
         return formatter.string(from: date)
     }

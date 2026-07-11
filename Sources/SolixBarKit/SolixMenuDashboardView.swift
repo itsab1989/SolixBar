@@ -232,7 +232,9 @@ final class SolixMenuDashboardView: NSView {
             titleLabel.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -12),
 
             valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            valueLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            // Wert nutzt die volle Kartenbreite statt die Icon-Einrückung zu
+            // erben — sonst kippt die Karte optisch.
+            valueLabel.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: 14),
             valueLabel.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -12)
         ])
 
@@ -305,13 +307,7 @@ final class SolixMenuDashboardView: NSView {
     private func coloredSymbol(_ symbol: String, color: NSColor) -> NSImage? {
         guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
         let configured = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 17, weight: .semibold)) ?? image
-        let copy = configured.copy() as? NSImage ?? configured
-        copy.isTemplate = false
-        copy.lockFocus()
-        color.set()
-        NSRect(origin: .zero, size: copy.size).fill(using: .sourceAtop)
-        copy.unlockFocus()
-        return copy
+        return configured.tinted(color)
     }
 
     private func iconPlate(symbol: String, color: NSColor, size: CGFloat, pointSize: CGFloat) -> NSView {
@@ -338,13 +334,7 @@ final class SolixMenuDashboardView: NSView {
     private func coloredSymbol(_ symbol: String, color: NSColor, pointSize: CGFloat) -> NSImage? {
         guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) else { return nil }
         let configured = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: pointSize, weight: .bold)) ?? image
-        let copy = configured.copy() as? NSImage ?? configured
-        copy.isTemplate = false
-        copy.lockFocus()
-        color.set()
-        NSRect(origin: .zero, size: copy.size).fill(using: .sourceAtop)
-        copy.unlockFocus()
-        return copy
+        return configured.tinted(color)
     }
 
     private func signedWatts(_ value: Int?) -> String? {

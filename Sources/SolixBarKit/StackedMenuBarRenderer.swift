@@ -74,7 +74,7 @@ enum StackedMenuBarRenderer {
                     let color = brightPalette ? Theme.bright(entry.role) : Theme.color(entry.role)
                     if let glyph = NSImage(systemSymbolName: entry.symbolName, accessibilityDescription: nil)?
                         .withSymbolConfiguration(.init(pointSize: glyphHeight, weight: .bold)) {
-                        let tinted = tint(glyph, with: color)
+                        let tinted = glyph.tinted(color)
                         let drawSize = glyphSize(for: entry.symbolName)
                         let glyphRect = NSRect(
                             x: x,
@@ -109,15 +109,5 @@ enum StackedMenuBarRenderer {
             }
             return true
         }
-    }
-
-    private static func tint(_ image: NSImage, with color: NSColor) -> NSImage {
-        let copy = image.copy() as? NSImage ?? image
-        copy.isTemplate = false
-        copy.lockFocus()
-        color.set()
-        NSRect(origin: .zero, size: copy.size).fill(using: .sourceAtop)
-        copy.unlockFocus()
-        return copy
     }
 }

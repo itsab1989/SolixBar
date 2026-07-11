@@ -174,7 +174,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     private func targetSize(for attributedText: NSAttributedString?, stackedImage: NSImage?, screen: NSScreen?) -> NSSize {
         let textWidth = ceil(stackedImage?.size.width ?? attributedText?.size().width ?? 152)
         let scale = AppSettings.shared.detachedMenuBarScale
-        let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? round(34 * scale) : 0
+        let iconWidth: CGFloat = AppSettings.shared.detachedShowIcon ? round(34 * scale) : 0
         let closeWidth: CGFloat = AppSettings.shared.lockDetachedMenuBar ? 0 : round(44 * scale)
         let horizontalPadding: CGFloat = round(34 * scale)
         let width = textWidth + iconWidth + closeWidth + horizontalPadding
@@ -320,7 +320,7 @@ private final class DetachedMenuBarView: NSView {
         stack.alignment = .centerY
         stack.spacing = round(10 * settings.detachedMenuBarScale)
 
-        if settings.showMenuBarIcon, let image = appIcon() {
+        if settings.detachedShowIcon, let image = appIcon() {
             let imageView = NSImageView(image: image)
             let iconSize = round(24 * settings.detachedMenuBarScale)
             imageView.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
@@ -413,13 +413,7 @@ private final class DetachedMenuBarView: NSView {
         let image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "SOLIX")?
             .withSymbolConfiguration(.init(pointSize: round(14 * settings.detachedMenuBarScale), weight: .semibold))
         guard let image else { return nil }
-        let tinted = image.copy() as? NSImage ?? image
-        tinted.isTemplate = false
-        tinted.lockFocus()
-        NSColor.white.withAlphaComponent(0.85).set()
-        NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
-        tinted.unlockFocus()
-        return tinted
+        return image.tinted(NSColor.white.withAlphaComponent(0.85))
     }
 
     /// Löst Farben über das semantische Rollen-Attribut (.solixRole) auf,
@@ -429,28 +423,18 @@ private final class DetachedMenuBarView: NSView {
     private func readableDetachedText(_ attributedText: NSAttributedString) -> NSAttributedString {
         let result = NSMutableAttributedString(attributedString: attributedText)
         let fullRange = NSRange(location: 0, length: result.length)
-        let shadow = NSShadow()
-        shadow.shadowColor = NSColor.black.withAlphaComponent(0.92)
-        shadow.shadowBlurRadius = 3
-        shadow.shadowOffset = NSSize(width: 0, height: -1)
-        result.addAttributes(
-            [
-                .shadow: shadow,
-                .strokeColor: NSColor.black.withAlphaComponent(0.70),
-                .strokeWidth: -1.5
-            ],
-            range: fullRange
-        )
+        // Kontur- und Schatteneffekte entfernen: Auf dem satten dunklen
+        // Hintergrund der Leiste erzeugten sie Doppelkanten an den Glyphen
+        // (zulaufende "e", doppelt gerändertes "P"); der geerbte
+        // Menüleisten-Schatten fliegt ebenfalls raus.
+        result.removeAttribute(.shadow, range: fullRange)
+        result.removeAttribute(.strokeColor, range: fullRange)
+        result.removeAttribute(.strokeWidth, range: fullRange)
 
         result.enumerateAttributes(in: fullRange) { attributes, range, _ in
             let role = (attributes[.solixRole] as? String).flatMap(ColorRole.init(rawValue:))
             if let attachment = attributes[.attachment] as? NSTextAttachment, let image = attachment.image {
-                let tinted = image.copy() as? NSImage ?? image
-                tinted.isTemplate = false
-                tinted.lockFocus()
-                Theme.bright(role ?? .neutral).set()
-                NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
-                tinted.unlockFocus()
+                let tinted = image.tinted(Theme.bright(role ?? .neutral))
                 let replacement = NSTextAttachment()
                 replacement.image = tinted
                 replacement.bounds = attachment.bounds

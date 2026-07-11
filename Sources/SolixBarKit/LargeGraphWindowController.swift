@@ -31,7 +31,10 @@ final class LargeGraphWindowController: NSWindowController {
 
     func rebuild() {
         segmented.selectedSegment = HistoryRange.allCases.firstIndex(of: settings.historyRange) ?? 0
-        customDaysField.stringValue = String(Int(settings.customHistoryDays))
+        customDaysField.stringValue = LocalizedText.text(
+            "\(Int(settings.customHistoryDays)) Tage",
+            "\(Int(settings.customHistoryDays)) days"
+        )
         customDaysField.isEnabled = settings.historyRange == .custom
 
         let selectedMetrics = Set(settings.graphMetrics)
@@ -72,7 +75,7 @@ final class LargeGraphWindowController: NSWindowController {
         segmented.controlSize = .regular
         segmented.toolTip = "Wählt den Zeitraum für den Graphen."
 
-        customDaysField.placeholderString = "Tage"
+        customDaysField.placeholderString = LocalizedText.text("Tage", "days")
         customDaysField.target = self
         customDaysField.action = #selector(changeCustomDays)
         customDaysField.cell = CenteredTextFieldCell(textCell: "")
@@ -98,7 +101,7 @@ final class LargeGraphWindowController: NSWindowController {
 
             customDaysField.centerYAnchor.constraint(equalTo: title.centerYAnchor),
             customDaysField.leadingAnchor.constraint(equalTo: segmented.trailingAnchor, constant: 10),
-            customDaysField.widthAnchor.constraint(equalToConstant: 64),
+            customDaysField.widthAnchor.constraint(equalToConstant: 84),
             customDaysField.heightAnchor.constraint(equalToConstant: 28),
 
             metricControls.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 14),

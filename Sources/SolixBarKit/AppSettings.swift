@@ -175,6 +175,10 @@ struct AppSettingsSnapshot {
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
     var detachedBarMetrics: [BarMetric]
+    var detachedShowLabels: Bool
+    var detachedShowSymbols: Bool
+    var detachedShowArrows: Bool
+    var detachedShowIcon: Bool
     var menuBarStacked: Bool
     var detachedBarStacked: Bool
     var showMenuBarIcon: Bool
@@ -189,6 +193,7 @@ struct AppSettingsSnapshot {
     var historyRange: HistoryRange
     var customHistoryDays: Double
     var graphMetrics: [GraphMetric]
+    var graphFitsData: Bool
     var isDetachedMenuBarActive: Bool
     var detachedMenuBarFrame: String
 }
@@ -250,6 +255,31 @@ final class AppSettings {
         set {
             defaults.set(newValue.map(\.rawValue), forKey: "detachedBarMetrics")
         }
+    }
+
+    private func followBool(_ key: String, fallback: Bool) -> Bool {
+        guard defaults.object(forKey: key) != nil else { return fallback }
+        return defaults.bool(forKey: key)
+    }
+
+    var detachedShowLabels: Bool {
+        get { followBool("detachedShowLabels", fallback: showMetricLabels) }
+        set { defaults.set(newValue, forKey: "detachedShowLabels") }
+    }
+
+    var detachedShowSymbols: Bool {
+        get { followBool("detachedShowSymbols", fallback: showMenuBarMetricSymbols) }
+        set { defaults.set(newValue, forKey: "detachedShowSymbols") }
+    }
+
+    var detachedShowArrows: Bool {
+        get { followBool("detachedShowArrows", fallback: showEnergyFlowArrows) }
+        set { defaults.set(newValue, forKey: "detachedShowArrows") }
+    }
+
+    var detachedShowIcon: Bool {
+        get { followBool("detachedShowIcon", fallback: showMenuBarIcon) }
+        set { defaults.set(newValue, forKey: "detachedShowIcon") }
     }
 
     func migrateMenuBarGridMetricIfNeeded() {
@@ -355,6 +385,16 @@ final class AppSettings {
         historyRange.duration(customDays: customHistoryDays)
     }
 
+    /// Passt die Zeitachse an vorhandene Daten an, statt leere Zeiträume zu
+    /// zeigen. Abschaltbar für den festen Kalenderblick.
+    var graphFitsData: Bool {
+        get {
+            guard defaults.object(forKey: "graphFitsData") != nil else { return true }
+            return defaults.bool(forKey: "graphFitsData")
+        }
+        set { defaults.set(newValue, forKey: "graphFitsData") }
+    }
+
     var graphMetrics: [GraphMetric] {
         get {
             guard let values = defaults.array(forKey: "graphMetrics") as? [String] else {
@@ -387,6 +427,10 @@ final class AppSettings {
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
             detachedBarMetrics: detachedBarMetrics,
+            detachedShowLabels: detachedShowLabels,
+            detachedShowSymbols: detachedShowSymbols,
+            detachedShowArrows: detachedShowArrows,
+            detachedShowIcon: detachedShowIcon,
             menuBarStacked: menuBarStacked,
             detachedBarStacked: detachedBarStacked,
             showMenuBarIcon: showMenuBarIcon,
@@ -401,6 +445,7 @@ final class AppSettings {
             historyRange: historyRange,
             customHistoryDays: customHistoryDays,
             graphMetrics: graphMetrics,
+            graphFitsData: graphFitsData,
             isDetachedMenuBarActive: isDetachedMenuBarActive,
             detachedMenuBarFrame: detachedMenuBarFrame
         )
@@ -413,6 +458,10 @@ final class AppSettings {
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
         detachedBarMetrics = snapshot.detachedBarMetrics
+        detachedShowLabels = snapshot.detachedShowLabels
+        detachedShowSymbols = snapshot.detachedShowSymbols
+        detachedShowArrows = snapshot.detachedShowArrows
+        detachedShowIcon = snapshot.detachedShowIcon
         menuBarStacked = snapshot.menuBarStacked
         detachedBarStacked = snapshot.detachedBarStacked
         showMenuBarIcon = snapshot.showMenuBarIcon
@@ -427,6 +476,7 @@ final class AppSettings {
         historyRange = snapshot.historyRange
         customHistoryDays = snapshot.customHistoryDays
         graphMetrics = snapshot.graphMetrics
+        graphFitsData = snapshot.graphFitsData
         isDetachedMenuBarActive = snapshot.isDetachedMenuBarActive
         detachedMenuBarFrame = snapshot.detachedMenuBarFrame
     }

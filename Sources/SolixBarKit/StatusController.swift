@@ -226,9 +226,9 @@ final class StatusController: NSObject {
     private var detachedDisplayOptions: MenuBarDisplayOptions {
         MenuBarDisplayOptions(
             metrics: settings.detachedBarMetrics,
-            showLabels: settings.showMetricLabels,
-            showSymbols: settings.showMenuBarMetricSymbols,
-            showArrows: settings.showEnergyFlowArrows
+            showLabels: settings.detachedShowLabels,
+            showSymbols: settings.detachedShowSymbols,
+            showArrows: settings.detachedShowArrows
         )
     }
 
@@ -482,13 +482,7 @@ final class StatusController: NSObject {
         }
         let configuration = NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
         let configured = image.withSymbolConfiguration(configuration) ?? image
-        let copy = configured.copy() as? NSImage ?? configured
-        copy.isTemplate = false
-        copy.lockFocus()
-        color.set()
-        NSRect(origin: .zero, size: copy.size).fill(using: .sourceAtop)
-        copy.unlockFocus()
-        return copy
+        return configured.tinted(color)
     }
 
     private func updateMenuBarIcon() {
