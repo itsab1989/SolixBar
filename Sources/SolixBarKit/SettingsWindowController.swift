@@ -32,6 +32,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let autostartStatus = NSTextField(labelWithString: "")
     private let updateCheckButton = NSButton(checkboxWithTitle: "Automatisch nach Updates suchen", target: nil, action: nil)
     private let perPVButton = NSButton(checkboxWithTitle: "Einzelne PV-Eingänge anzeigen", target: nil, action: nil)
+    private let warnBatteryButton = NSButton(checkboxWithTitle: "Bei niedrigem Akkustand warnen", target: nil, action: nil)
+    private let warnBatteryThresholdField = NSTextField()
+    private let warnPVStallButton = NSButton(checkboxWithTitle: "Bei PV-Einbruch warnen", target: nil, action: nil)
+    private let warnPVMinutesField = NSTextField()
+    private let warnPVWattsField = NSTextField()
+    private let warnPVWindowButton = NSButton(checkboxWithTitle: "Zusätzlich im Zeitfenster warnen", target: nil, action: nil)
+    private let warnPVWindowStartField = NSTextField()
+    private let warnPVWindowEndField = NSTextField()
+    private let warnPerPVButton = NSButton(checkboxWithTitle: "Einzelne PV-Eingänge überwachen", target: nil, action: nil)
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
     private let stackedButton = NSButton(checkboxWithTitle: "Zweizeilige Kompaktanzeige", target: nil, action: nil)
     private let stackedDetachedButton = NSButton(checkboxWithTitle: "Abgedockte Leiste: Kompaktanzeige", target: nil, action: nil)
@@ -133,11 +142,43 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             "Optional starting value for total yield. Without an API total, SolixBar locally accumulates all continuous solar measurements."
         )
 
-        for textField in [commandField, urlField, intervalField, solixEmailField, solixPasswordField, solixCountryField, solixTodayBaseField, solixTotalBaseField] {
+        let batteryNumbers = NumberFormatter()
+        batteryNumbers.allowsFloats = false
+        batteryNumbers.minimum = 5
+        batteryNumbers.maximum = 95
+        warnBatteryThresholdField.formatter = batteryNumbers
+        let minutesNumbers = NumberFormatter()
+        minutesNumbers.allowsFloats = false
+        minutesNumbers.minimum = 5
+        minutesNumbers.maximum = 120
+        warnPVMinutesField.formatter = minutesNumbers
+        let wattsNumbers = NumberFormatter()
+        wattsNumbers.allowsFloats = false
+        wattsNumbers.minimum = 10
+        wattsNumbers.maximum = 2000
+        warnPVWattsField.formatter = wattsNumbers
+        let startHourNumbers = NumberFormatter()
+        startHourNumbers.allowsFloats = false
+        startHourNumbers.minimum = 0
+        startHourNumbers.maximum = 23
+        warnPVWindowStartField.formatter = startHourNumbers
+        let endHourNumbers = NumberFormatter()
+        endHourNumbers.allowsFloats = false
+        endHourNumbers.minimum = 1
+        endHourNumbers.maximum = 24
+        warnPVWindowEndField.formatter = endHourNumbers
+        for field in [warnBatteryThresholdField, warnPVMinutesField, warnPVWattsField, warnPVWindowStartField, warnPVWindowEndField] {
+            field.alignment = .center
+            field.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+            field.target = self
+            field.action = #selector(applyPreview)
+        }
+
+        for textField in [commandField, urlField, intervalField, solixEmailField, solixPasswordField, solixCountryField, solixTodayBaseField, solixTotalBaseField, warnBatteryThresholdField, warnPVMinutesField, warnPVWattsField, warnPVWindowStartField, warnPVWindowEndField] {
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, perPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, perPVButton, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -168,6 +209,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         tabs.addTabViewItem(tab(title: LocalizedText.text("Menüleiste", "Menu Bar"), view: menuBarPane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("Abgedockte Leiste", "Detached Bar"), view: detachedPane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("Datenquelle", "Data Source"), view: dataSourcePane()))
+        tabs.addTabViewItem(tab(title: LocalizedText.text("Warnungen", "Warnings"), view: warningsPane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("App", "App"), view: appPane()))
 
         let cancel = NSButton(title: LocalizedText.text("Abbrechen", "Cancel"), target: self, action: #selector(cancelSettings))
@@ -248,6 +290,37 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         lockDetachedMenuBarButton.title = LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar")
         autostartButton.title = LocalizedText.text("Beim Login automatisch starten", "Start automatically at login")
         updateCheckButton.title = LocalizedText.text("Automatisch nach Updates suchen", "Check for updates automatically")
+        warnBatteryButton.title = LocalizedText.text("Bei niedrigem Akkustand warnen", "Warn when the battery is low")
+        warnBatteryButton.toolTip = LocalizedText.text(
+            "Meldet sich einmal, wenn der Akku unter die Schwelle fällt. Erst wenn er wieder 5 Punkte darüber liegt, wird die Warnung neu scharf geschaltet.",
+            "Fires once when the battery drops below the threshold. It re-arms only after climbing 5 points above it again."
+        )
+        warnPVStallButton.title = LocalizedText.text("Bei PV-Einbruch warnen", "Warn when PV output collapses")
+        warnPVStallButton.toolTip = LocalizedText.text(
+            "Warnt, wenn die Solarmodule auf 0 W fallen, obwohl sie in der letzten Stunde noch nennenswert erzeugt haben. Nachts bleibt es dadurch still.",
+            "Warns when the panels drop to 0 W although they produced meaningfully within the last hour. Stays silent at night as a result."
+        )
+        warnPVWindowButton.title = LocalizedText.text("Zusätzlich im Zeitfenster warnen", "Also warn within a time window")
+        warnPVWindowButton.toolTip = LocalizedText.text(
+            "Meldet 0 W auch ohne vorherige Erzeugung, solange die Uhrzeit im angegebenen Fenster liegt — z. B. wenn die Anlage schon morgens nicht anläuft.",
+            "Also reports 0 W without prior production while the time of day is inside the window — e.g. when the system never starts up in the morning."
+        )
+        warnPerPVButton.title = LocalizedText.text("Einzelne PV-Eingänge überwachen", "Monitor individual PV inputs")
+        warnPerPVButton.toolTip = LocalizedText.text(
+            "Warnt, wenn ein PV-Eingang dauerhaft 0 W liefert, während die anderen Eingänge erzeugen. Braucht eine Solarbank, die ihre MPPT-Kanäle einzeln meldet (Solarbank 2/3).",
+            "Warns when one PV input stays at 0 W while the other inputs are producing. Requires a Solarbank that reports its MPPT channels individually (Solarbank 2/3)."
+        )
+        warnBatteryThresholdField.toolTip = LocalizedText.text("Warnschwelle in Prozent (5–95).", "Warning threshold in percent (5–95).")
+        warnPVMinutesField.toolTip = LocalizedText.text(
+            "So viele Minuten muss die PV durchgehend 0 W liefern, bevor gewarnt wird (5–120).",
+            "How many minutes PV must stay at 0 W before warning (5–120)."
+        )
+        warnPVWattsField.toolTip = LocalizedText.text(
+            "Ab dieser Leistung gilt die Anlage als \"hat kürzlich erzeugt\" (10–2000 W).",
+            "Output at or above this counts as \"was recently producing\" (10–2000 W)."
+        )
+        warnPVWindowStartField.toolTip = LocalizedText.text("Beginn des Zeitfensters (Stunde, 0–23).", "Window start (hour, 0–23).")
+        warnPVWindowEndField.toolTip = LocalizedText.text("Ende des Zeitfensters (Stunde, 1–24).", "Window end (hour, 1–24).")
         perPVButton.title = LocalizedText.text("Einzelne PV-Eingänge anzeigen", "Show individual PV inputs")
         perPVButton.toolTip = LocalizedText.text(
             "Zeigt im Dashboard die Leistung jedes PV-Eingangs einzeln (z. B. \"438 W · 204 W\"). Erscheint nur bei Solarbanks, die ihre MPPT-Kanäle einzeln melden; sonst bleibt es beim Gesamtwert.",
@@ -607,6 +680,97 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         return container
     }
 
+    private func warningsPane() -> NSView {
+        let container = NSView()
+
+        let batteryTitle = sectionTitle(LocalizedText.text("Akku", "Battery"))
+        let batteryRow = settingRow(warnBatteryButton, help: warnBatteryButton.toolTip ?? "")
+        warnBatteryThresholdField.widthAnchor.constraint(equalToConstant: 64).isActive = true
+        let batteryThresholdStack = NSStackView(views: [warnBatteryThresholdField, NSTextField(labelWithString: "%")])
+        batteryThresholdStack.orientation = .horizontal
+        batteryThresholdStack.spacing = 6
+        let batteryThresholdRow = NSStackView(views: [
+            label(LocalizedText.text("Warnschwelle", "Threshold")),
+            batteryThresholdStack,
+            helpButton(warnBatteryThresholdField.toolTip ?? "")
+        ])
+
+        let pvTitle = sectionTitle("PV")
+        let pvStallRow = settingRow(warnPVStallButton, help: warnPVStallButton.toolTip ?? "")
+        warnPVMinutesField.widthAnchor.constraint(equalToConstant: 64).isActive = true
+        let pvMinutesStack = NSStackView(views: [warnPVMinutesField, NSTextField(labelWithString: LocalizedText.text("Minuten", "minutes"))])
+        pvMinutesStack.orientation = .horizontal
+        pvMinutesStack.spacing = 6
+        let pvMinutesRow = NSStackView(views: [
+            label(LocalizedText.text("Dauer", "Duration")),
+            pvMinutesStack,
+            helpButton(warnPVMinutesField.toolTip ?? "")
+        ])
+        warnPVWattsField.widthAnchor.constraint(equalToConstant: 64).isActive = true
+        let pvWattsStack = NSStackView(views: [warnPVWattsField, NSTextField(labelWithString: "W")])
+        pvWattsStack.orientation = .horizontal
+        pvWattsStack.spacing = 6
+        let pvWattsRow = NSStackView(views: [
+            label(LocalizedText.text("Erzeugung", "Production")),
+            pvWattsStack,
+            helpButton(warnPVWattsField.toolTip ?? "")
+        ])
+        let pvWindowRow = settingRow(warnPVWindowButton, help: warnPVWindowButton.toolTip ?? "")
+        warnPVWindowStartField.widthAnchor.constraint(equalToConstant: 48).isActive = true
+        warnPVWindowEndField.widthAnchor.constraint(equalToConstant: 48).isActive = true
+        let windowStack = NSStackView(views: [
+            warnPVWindowStartField,
+            NSTextField(labelWithString: LocalizedText.text("bis", "to")),
+            warnPVWindowEndField,
+            NSTextField(labelWithString: LocalizedText.text("Uhr", "o'clock"))
+        ])
+        windowStack.orientation = .horizontal
+        windowStack.spacing = 6
+        let windowFieldsRow = NSStackView(views: [
+            label(LocalizedText.text("Zeitfenster", "Window")),
+            windowStack,
+            helpButton(warnPVWindowStartField.toolTip ?? "")
+        ])
+
+        let channelsTitle = sectionTitle(LocalizedText.text("PV-Eingänge", "PV Inputs"))
+        let perPVWarnRow = settingRow(warnPerPVButton, help: warnPerPVButton.toolTip ?? "")
+
+        let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
+            "Warnungen erscheinen als macOS-Mitteilung (beim ersten Mal fragt das System um Erlaubnis) und zusätzlich oben im SolixBar-Menü, solange die Bedingung anhält.",
+            "Warnings appear as macOS notifications (the system asks for permission the first time) and additionally at the top of the SolixBar menu while the condition persists."
+        ))
+        hint.textColor = .secondaryLabelColor
+
+        for row in [batteryThresholdRow, pvMinutesRow, pvWattsRow, windowFieldsRow] {
+            row.orientation = .horizontal
+            row.spacing = 12
+            row.alignment = .centerY
+        }
+
+        let stack = NSStackView(views: [
+            batteryTitle, batteryRow, batteryThresholdRow,
+            pvTitle, pvStallRow, pvMinutesRow, pvWattsRow, pvWindowRow, windowFieldsRow,
+            channelsTitle, perPVWarnRow,
+            hint
+        ])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.setCustomSpacing(20, after: batteryThresholdRow)
+        stack.setCustomSpacing(20, after: windowFieldsRow)
+        stack.setCustomSpacing(18, after: perPVWarnRow)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 22),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24)
+        ])
+
+        return container
+    }
+
     private func formRow(labelText: String, control: NSView) -> NSStackView {
         let row = NSStackView()
         configure(row: row, labelText: labelText, control: control)
@@ -891,6 +1055,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
         updateCheckButton.state = settings.updateCheckEnabled ? .on : .off
         perPVButton.state = settings.showPerPVValues ? .on : .off
+        warnBatteryButton.state = settings.warnBatteryLowEnabled ? .on : .off
+        warnBatteryThresholdField.stringValue = String(settings.warnBatteryLowThreshold)
+        warnPVStallButton.state = settings.warnPVStallEnabled ? .on : .off
+        warnPVMinutesField.stringValue = String(settings.warnPVStallMinutes)
+        warnPVWattsField.stringValue = String(settings.warnPVStallMinRecentWatts)
+        warnPVWindowButton.state = settings.warnPVWindowEnabled ? .on : .off
+        warnPVWindowStartField.stringValue = String(settings.warnPVWindowStart)
+        warnPVWindowEndField.stringValue = String(settings.warnPVWindowEnd)
+        warnPerPVButton.state = settings.warnPerPVEnabled ? .on : .off
         refreshAutostartState()
         updateDataSourceFieldVisibility()
         updateMenuBarPreview()
@@ -946,6 +1119,25 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.graphWindowLevel = levelModes[max(0, min(levelModes.count - 1, graphLevelPopup.indexOfSelectedItem))]
         settings.updateCheckEnabled = updateCheckButton.state == .on
         settings.showPerPVValues = perPVButton.state == .on
+        settings.warnBatteryLowEnabled = warnBatteryButton.state == .on
+        if let threshold = Int(warnBatteryThresholdField.stringValue) {
+            settings.warnBatteryLowThreshold = threshold
+        }
+        settings.warnPVStallEnabled = warnPVStallButton.state == .on
+        if let minutes = Int(warnPVMinutesField.stringValue) {
+            settings.warnPVStallMinutes = minutes
+        }
+        if let watts = Int(warnPVWattsField.stringValue) {
+            settings.warnPVStallMinRecentWatts = watts
+        }
+        settings.warnPVWindowEnabled = warnPVWindowButton.state == .on
+        if let start = Int(warnPVWindowStartField.stringValue) {
+            settings.warnPVWindowStart = start
+        }
+        if let end = Int(warnPVWindowEndField.stringValue) {
+            settings.warnPVWindowEnd = end
+        }
+        settings.warnPerPVEnabled = warnPerPVButton.state == .on
         settings.detachedShowIcon = detachedIconButton.state == .on
         settings.detachedShowLabels = detachedLabelsButton.state == .on
         settings.detachedShowSymbols = detachedSymbolsButton.state == .on

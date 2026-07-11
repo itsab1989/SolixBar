@@ -25,6 +25,7 @@ final class StatusController: NSObject {
     private let refreshFrames = ["↻", "↺"]
     private var updateCheckTimer: Timer?
     private var availableUpdate: ReleaseInfo?
+    private var warningEngine = WarningEngine()
 
     func start() {
         settings.migrateMenuBarGridMetricIfNeeded()
@@ -103,6 +104,56 @@ final class StatusController: NSObject {
         NSWorkspace.shared.open(availableUpdate?.url ?? UpdateChecker.releasesPageURL)
     }
 
+    private func evaluateWarnings(for snapshot: SolixSnapshot) {
+        let events = warningEngine.evaluate(
+            snapshot: snapshot,
+            at: snapshot.updatedAt,
+            config: settings.warningConfig()
+        )
+        for event in events {
+            let (id, title, body) = warningText(for: event)
+            AppLogger.info("Warning fired: \(id)")
+            NotificationManager.shared.post(id: id, title: title, body: body)
+        }
+        // Aktive Warnungen erscheinen zusätzlich oben im Menü — der immer
+        // funktionierende Weg, falls Mitteilungen nicht erlaubt wurden.
+        if !events.isEmpty {
+            rebuildMenu()
+        }
+    }
+
+    private func warningText(for event: WarningEngine.Event) -> (id: String, title: String, body: String) {
+        switch event {
+        case .batteryLow(let percent):
+            return (
+                "solixbar.warning.battery-low",
+                LocalizedText.text("Akku niedrig", "Battery low"),
+                LocalizedText.text(
+                    "Der Akku ist auf \(percent) % gefallen.",
+                    "The battery has dropped to \(percent)%."
+                )
+            )
+        case .pvStalled:
+            return (
+                "solixbar.warning.pv-stalled",
+                LocalizedText.text("PV liefert nichts", "PV not generating"),
+                LocalizedText.text(
+                    "Die Solarmodule liefern seit längerem keine Leistung.",
+                    "The solar panels have not produced any power for a while."
+                )
+            )
+        case .pvChannelDead(let index):
+            return (
+                "solixbar.warning.pv-channel-\(index)",
+                LocalizedText.text("PV-Eingang \(index + 1) liefert nichts", "PV input \(index + 1) not generating"),
+                LocalizedText.text(
+                    "Eingang \(index + 1) liefert 0 W, während die anderen Eingänge erzeugen.",
+                    "Input \(index + 1) is at 0 W while the other inputs are producing."
+                )
+            )
+        }
+    }
+
     func prepareForTermination() {
         isTerminating = true
         settings.isDetachedMenuBarActive = isMenuBarDetached
@@ -162,6 +213,7 @@ final class StatusController: NSObject {
                     refreshInterval: settings.refreshInterval
                 )
                 AppLogger.info("Refresh succeeded: battery=\(snapshot.batteryPercent.map(String.init) ?? "-")%, solar=\(snapshot.solarWatts.map(String.init) ?? "-")W, grid=\(snapshot.gridWatts.map(String.init) ?? "-")W.")
+                evaluateWarnings(for: snapshot)
             } catch {
                 // Letzten gültigen Snapshot behalten: ein transienter Fehler
                 // soll die Anzeige nicht leeren, nur als veraltet markieren.
@@ -380,6 +432,19 @@ final class StatusController: NSObject {
         if let lastError {
             menu.addItem(NSMenuItem.separator())
             menu.addItem(value(LocalizedText.text("Fehler", "Error"), lastError, symbol: "exclamationmark.triangle.fill", color: .systemRed))
+        }
+
+        if !warningEngine.activeEvents.isEmpty {
+            menu.addItem(NSMenuItem.separator())
+            for event in warningEngine.activeEvents {
+                let text = warningText(for: event)
+                menu.addItem(value(
+                    LocalizedText.text("Warnung", "Warning"),
+                    text.title,
+                    symbol: "exclamationmark.triangle.fill",
+                    color: .systemOrange
+                ))
+            }
         }
 
         if let update = availableUpdate {

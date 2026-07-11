@@ -216,6 +216,15 @@ struct AppSettingsSnapshot: Equatable {
     var graphWindowLevel: WindowLevelMode
     var updateCheckEnabled: Bool
     var showPerPVValues: Bool
+    var warnBatteryLowEnabled: Bool
+    var warnBatteryLowThreshold: Int
+    var warnPVStallEnabled: Bool
+    var warnPVStallMinutes: Int
+    var warnPVStallMinRecentWatts: Int
+    var warnPVWindowEnabled: Bool
+    var warnPVWindowStart: Int
+    var warnPVWindowEnd: Int
+    var warnPerPVEnabled: Bool
 }
 
 @MainActor
@@ -512,6 +521,83 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "showPerPVValues") }
     }
 
+    // MARK: Warnungen (alle opt-in — ein Update darf nicht unaufgefordert
+    // Mitteilungen schicken)
+
+    var warnBatteryLowEnabled: Bool {
+        get { followBool("warnBatteryLowEnabled", fallback: false) }
+        set { defaults.set(newValue, forKey: "warnBatteryLowEnabled") }
+    }
+
+    var warnBatteryLowThreshold: Int {
+        get {
+            let value = defaults.integer(forKey: "warnBatteryLowThreshold")
+            return value > 0 ? min(95, max(5, value)) : 20
+        }
+        set { defaults.set(min(95, max(5, newValue)), forKey: "warnBatteryLowThreshold") }
+    }
+
+    var warnPVStallEnabled: Bool {
+        get { followBool("warnPVStallEnabled", fallback: false) }
+        set { defaults.set(newValue, forKey: "warnPVStallEnabled") }
+    }
+
+    var warnPVStallMinutes: Int {
+        get {
+            let value = defaults.integer(forKey: "warnPVStallMinutes")
+            return value > 0 ? min(120, max(5, value)) : 15
+        }
+        set { defaults.set(min(120, max(5, newValue)), forKey: "warnPVStallMinutes") }
+    }
+
+    var warnPVStallMinRecentWatts: Int {
+        get {
+            let value = defaults.integer(forKey: "warnPVStallMinRecentWatts")
+            return value > 0 ? min(2000, max(10, value)) : 50
+        }
+        set { defaults.set(min(2000, max(10, newValue)), forKey: "warnPVStallMinRecentWatts") }
+    }
+
+    var warnPVWindowEnabled: Bool {
+        get { followBool("warnPVWindowEnabled", fallback: false) }
+        set { defaults.set(newValue, forKey: "warnPVWindowEnabled") }
+    }
+
+    var warnPVWindowStart: Int {
+        get {
+            guard defaults.object(forKey: "warnPVWindowStart") != nil else { return 9 }
+            return min(23, max(0, defaults.integer(forKey: "warnPVWindowStart")))
+        }
+        set { defaults.set(min(23, max(0, newValue)), forKey: "warnPVWindowStart") }
+    }
+
+    var warnPVWindowEnd: Int {
+        get {
+            guard defaults.object(forKey: "warnPVWindowEnd") != nil else { return 17 }
+            return min(24, max(1, defaults.integer(forKey: "warnPVWindowEnd")))
+        }
+        set { defaults.set(min(24, max(1, newValue)), forKey: "warnPVWindowEnd") }
+    }
+
+    var warnPerPVEnabled: Bool {
+        get { followBool("warnPerPVEnabled", fallback: false) }
+        set { defaults.set(newValue, forKey: "warnPerPVEnabled") }
+    }
+
+    func warningConfig() -> WarningEngine.Config {
+        WarningEngine.Config(
+            batteryLowEnabled: warnBatteryLowEnabled,
+            batteryLowThreshold: warnBatteryLowThreshold,
+            pvStallEnabled: warnPVStallEnabled,
+            pvStallMinutes: warnPVStallMinutes,
+            pvStallMinRecentWatts: warnPVStallMinRecentWatts,
+            pvWindowEnabled: warnPVWindowEnabled,
+            pvWindowStartHour: warnPVWindowStart,
+            pvWindowEndHour: warnPVWindowEnd,
+            perPVEnabled: warnPerPVEnabled
+        )
+    }
+
     /// Zuletzt gemeldete Update-Version — Zustand, keine Einstellung: bewusst
     /// nicht im Snapshot, damit "Abbrechen" im Einstellungsfenster keine
     /// bereits gezeigte Benachrichtigung wieder scharf schaltet.
@@ -556,7 +642,16 @@ final class AppSettings {
             dashboardWindowLevel: dashboardWindowLevel,
             graphWindowLevel: graphWindowLevel,
             updateCheckEnabled: updateCheckEnabled,
-            showPerPVValues: showPerPVValues
+            showPerPVValues: showPerPVValues,
+            warnBatteryLowEnabled: warnBatteryLowEnabled,
+            warnBatteryLowThreshold: warnBatteryLowThreshold,
+            warnPVStallEnabled: warnPVStallEnabled,
+            warnPVStallMinutes: warnPVStallMinutes,
+            warnPVStallMinRecentWatts: warnPVStallMinRecentWatts,
+            warnPVWindowEnabled: warnPVWindowEnabled,
+            warnPVWindowStart: warnPVWindowStart,
+            warnPVWindowEnd: warnPVWindowEnd,
+            warnPerPVEnabled: warnPerPVEnabled
         )
     }
 
@@ -596,5 +691,14 @@ final class AppSettings {
         graphWindowLevel = snapshot.graphWindowLevel
         updateCheckEnabled = snapshot.updateCheckEnabled
         showPerPVValues = snapshot.showPerPVValues
+        warnBatteryLowEnabled = snapshot.warnBatteryLowEnabled
+        warnBatteryLowThreshold = snapshot.warnBatteryLowThreshold
+        warnPVStallEnabled = snapshot.warnPVStallEnabled
+        warnPVStallMinutes = snapshot.warnPVStallMinutes
+        warnPVStallMinRecentWatts = snapshot.warnPVStallMinRecentWatts
+        warnPVWindowEnabled = snapshot.warnPVWindowEnabled
+        warnPVWindowStart = snapshot.warnPVWindowStart
+        warnPVWindowEnd = snapshot.warnPVWindowEnd
+        warnPerPVEnabled = snapshot.warnPerPVEnabled
     }
 }
