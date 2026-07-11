@@ -373,7 +373,7 @@ final class StatusController: NSObject {
             showSymbols: settings.showMenuBarMetricSymbols,
             showArrows: settings.showEnergyFlowArrows,
             showColors: settings.showFlowColors,
-            perPVWatts: settings.menuBarPerPVWatts
+            pvDisplay: settings.menuBarPVDisplay
         )
     }
 
@@ -384,7 +384,7 @@ final class StatusController: NSObject {
             showSymbols: settings.detachedShowSymbols,
             showArrows: settings.detachedShowArrows,
             showColors: settings.detachedShowFlowColors,
-            perPVWatts: settings.detachedPerPVWatts
+            pvDisplay: settings.detachedPVDisplay
         )
     }
 
@@ -936,7 +936,7 @@ final class StatusController: NSObject {
         let signature = [
             settings.barMetrics.map(\.rawValue).joined(separator: ","),
             settings.effectiveStackedBarMetrics.map(\.rawValue).joined(separator: ","),
-            String(settings.menuBarPerPVWatts),
+            settings.menuBarPVDisplay.rawValue,
             String(settings.showMetricLabels),
             String(settings.showMenuBarMetricSymbols),
             String(settings.showEnergyFlowArrows),

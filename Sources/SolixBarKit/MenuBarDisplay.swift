@@ -30,9 +30,10 @@ struct MenuBarDisplayOptions: Sendable {
     /// Rollenfarben auf Werten/Symbolen — unabhängig von der Flussrichtung;
     /// Farben kosten keine Breite und bleiben daher auf allen Stufen erhalten.
     var showColors: Bool = true
-    /// PV-Wert als Einzelwerte je Eingang ("438·204W") statt Summe — greift
-    /// nur, wenn der Snapshot Kanalwerte enthält (Solarbank 2/3).
-    var perPVWatts: Bool = false
+    /// PV-Wert als Summe, Einzelwerte je Eingang ("438·204W") oder beides
+    /// ("642W (438·204)") — Einzelwerte nur, wenn der Snapshot Kanalwerte
+    /// enthält (Solarbank 2/3), sonst automatisch die Summe.
+    var pvDisplay: PVDisplayMode = .total
 
     func applying(_ level: MenuBarDisplayLevel) -> MenuBarDisplayOptions {
         var result = self

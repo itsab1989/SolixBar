@@ -31,9 +31,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let updateCheckButton = NSButton(checkboxWithTitle: "Automatisch nach Updates suchen", target: nil, action: nil)
-    private let perPVButton = NSButton(checkboxWithTitle: "PV-Eingänge einzeln statt Summe", target: nil, action: nil)
-    private let menuBarPerPVButton = NSButton(checkboxWithTitle: "PV-Eingänge einzeln statt Summe", target: nil, action: nil)
-    private let detachedPerPVButton = NSButton(checkboxWithTitle: "PV-Eingänge einzeln statt Summe", target: nil, action: nil)
+    private let dashboardPVPopup = NSPopUpButton()
+    private let menuBarPVPopup = NSPopUpButton()
+    private let detachedPVPopup = NSPopUpButton()
     private let warnBatteryButton = NSButton(checkboxWithTitle: "Bei niedrigem Akkustand warnen", target: nil, action: nil)
     private let warnBatteryThresholdField = NSTextField()
     private let warnPVStallButton = NSButton(checkboxWithTitle: "Bei PV-Einbruch warnen", target: nil, action: nil)
@@ -197,7 +197,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, perPVButton, menuBarPerPVButton, detachedPerPVButton, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, dashboardPVPopup, menuBarPVPopup, detachedPVPopup, warnBatteryButton, warnPVStallButton, warnPVWindowButton, warnPerPVButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -340,20 +340,23 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         )
         warnPVWindowStartField.toolTip = LocalizedText.text("Beginn des Zeitfensters (Stunde, 0–23).", "Window start (hour, 0–23).")
         warnPVWindowEndField.toolTip = LocalizedText.text("Ende des Zeitfensters (Stunde, 1–24).", "Window end (hour, 1–24).")
-        perPVButton.title = LocalizedText.text("PV-Eingänge einzeln statt Summe", "Individual PV inputs instead of total")
-        perPVButton.toolTip = LocalizedText.text(
-            "Die PV-Kachel im Dashboard zeigt die Leistung jedes Eingangs einzeln (z. B. \"438 · 204 W\") statt der Summe. Braucht eine Solarbank, die ihre MPPT-Kanäle einzeln meldet; sonst bleibt es beim Gesamtwert.",
-            "The dashboard's PV tile shows each input's power separately (e.g. \"438 · 204 W\") instead of the total. Requires a Solarbank that reports its MPPT channels individually; otherwise the total is shown."
+        for popup in [dashboardPVPopup, menuBarPVPopup, detachedPVPopup] {
+            let index = popup.indexOfSelectedItem
+            popup.removeAllItems()
+            popup.addItems(withTitles: PVDisplayMode.allCases.map(\.title))
+            if index >= 0 { popup.selectItem(at: index) }
+        }
+        dashboardPVPopup.toolTip = LocalizedText.text(
+            "PV-Wert im Dashboard: nur die Summe, nur die Eingänge einzeln (\"438 · 204 W\" in der Kachel) oder Summe in der Kachel plus eigene Einzelwerte-Zeile. Einzelwerte brauchen eine Solarbank mit Kanal-Reporting (Solarbank 2/3), sonst bleibt es bei der Summe.",
+            "PV value in the dashboard: total only, individual inputs only (\"438 · 204 W\" in the tile), or the total in the tile plus a separate per-input row. Individual values require a Solarbank with channel reporting (Solarbank 2/3); otherwise the total is shown."
         )
-        menuBarPerPVButton.title = perPVButton.title
-        detachedPerPVButton.title = perPVButton.title
-        menuBarPerPVButton.toolTip = LocalizedText.text(
-            "Der PV-Wert in der Menüleiste zeigt die Eingänge einzeln (\"438·204W\") statt der Summe — gilt für einzeilige und Kompaktansicht. Braucht Kanal-Reporting (Solarbank 2/3).",
-            "The PV value in the menu bar shows the inputs individually (\"438·204W\") instead of the total — applies to single-line and compact views. Requires channel reporting (Solarbank 2/3)."
+        menuBarPVPopup.toolTip = LocalizedText.text(
+            "PV-Wert in der Menüleiste: Summe (\"642W\"), Einzelwerte (\"438·204W\") oder beides (\"642W (438·204)\") — gilt für einzeilige und Kompaktansicht. Einzelwerte brauchen Kanal-Reporting (Solarbank 2/3).",
+            "PV value in the menu bar: total (\"642W\"), individual inputs (\"438·204W\"), or both (\"642W (438·204)\") — applies to single-line and compact views. Individual values require channel reporting (Solarbank 2/3)."
         )
-        detachedPerPVButton.toolTip = LocalizedText.text(
-            "Der PV-Wert der abgedockten Leiste zeigt die Eingänge einzeln (\"438·204W\") statt der Summe — gilt für einzeilige und Kompaktansicht. Braucht Kanal-Reporting (Solarbank 2/3).",
-            "The detached bar's PV value shows the inputs individually (\"438·204W\") instead of the total — applies to single-line and compact views. Requires channel reporting (Solarbank 2/3)."
+        detachedPVPopup.toolTip = LocalizedText.text(
+            "PV-Wert der abgedockten Leiste: Summe, Einzelwerte oder beides — gilt für einzeilige und Kompaktansicht. Einzelwerte brauchen Kanal-Reporting (Solarbank 2/3).",
+            "PV value in the detached bar: total, individual inputs, or both — applies to single-line and compact views. Individual values require channel reporting (Solarbank 2/3)."
         )
         updateCheckButton.toolTip = LocalizedText.text(
             "Fragt einmal täglich die GitHub-Releases ab. Bei einer neueren Version erscheint eine Mitteilung und ein Eintrag im Menü — installiert wird nichts automatisch.",
@@ -410,7 +413,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let showMetricSymbolsRow = settingRow(showMetricSymbolsButton, help: showMetricSymbolsButton.toolTip ?? "")
         let showFlowColorsRow = settingRow(showFlowColorsButton, help: showFlowColorsButton.toolTip ?? "")
         let showEnergyFlowArrowsRow = settingRow(showEnergyFlowArrowsButton, help: showEnergyFlowArrowsButton.toolTip ?? "")
-        let menuBarPerPVRow = settingRow(menuBarPerPVButton, help: menuBarPerPVButton.toolTip ?? "")
+        let menuBarPerPVRow = NSStackView(views: [
+            label(LocalizedText.text("PV-Anzeige", "PV display")),
+            menuBarPVPopup,
+            helpButton(menuBarPVPopup.toolTip ?? "")
+        ])
+        menuBarPerPVRow.orientation = .horizontal
+        menuBarPerPVRow.spacing = 12
+        menuBarPerPVRow.alignment = .centerY
         let scaleRow = NSStackView(views: [label(LocalizedText.text("Skalierung", "Scale")), scaleSlider, scaleValue, helpButton(labelTooltip("Skalierung"))])
         scaleRow.orientation = .horizontal
         scaleRow.spacing = 12
@@ -487,7 +497,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let symbolsRow = settingRow(detachedSymbolsButton, help: detachedSymbolsButton.toolTip ?? "")
         let colorsRow = settingRow(detachedFlowColorsButton, help: detachedFlowColorsButton.toolTip ?? "")
         let arrowsRow = settingRow(detachedArrowsButton, help: detachedArrowsButton.toolTip ?? "")
-        let detachedPerPVRow = settingRow(detachedPerPVButton, help: detachedPerPVButton.toolTip ?? "")
+        let detachedPerPVRow = NSStackView(views: [
+            label(LocalizedText.text("PV-Anzeige", "PV display")),
+            detachedPVPopup,
+            helpButton(detachedPVPopup.toolTip ?? "")
+        ])
+        detachedPerPVRow.orientation = .horizontal
+        detachedPerPVRow.spacing = 12
+        detachedPerPVRow.alignment = .centerY
         let lockRow = settingRow(lockDetachedMenuBarButton, help: lockDetachedMenuBarButton.toolTip ?? "")
         let levelRow = NSStackView(views: [
             label(LocalizedText.text("Fensterebene", "Window level")),
@@ -675,7 +692,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         graphLevelRow.orientation = .horizontal
         graphLevelRow.spacing = 12
         graphLevelRow.alignment = .centerY
-        let perPVRow = settingRow(perPVButton, help: perPVButton.toolTip ?? "")
+        let perPVRow = NSStackView(views: [
+            label(LocalizedText.text("PV-Anzeige", "PV display")),
+            dashboardPVPopup,
+            helpButton(dashboardPVPopup.toolTip ?? "")
+        ])
+        perPVRow.orientation = .horizontal
+        perPVRow.spacing = 12
+        perPVRow.alignment = .centerY
         let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
         let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
         let updateCheckRow = settingRow(updateCheckButton, help: updateCheckButton.toolTip ?? "")
@@ -1141,9 +1165,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         displayActiveMetricList(detached: false)
         displayActiveMetricList(detached: true)
         updateCheckButton.state = settings.updateCheckEnabled ? .on : .off
-        perPVButton.state = settings.showPerPVValues ? .on : .off
-        menuBarPerPVButton.state = settings.menuBarPerPVWatts ? .on : .off
-        detachedPerPVButton.state = settings.detachedPerPVWatts ? .on : .off
+        dashboardPVPopup.selectItem(at: PVDisplayMode.allCases.firstIndex(of: settings.dashboardPVDisplay) ?? 0)
+        menuBarPVPopup.selectItem(at: PVDisplayMode.allCases.firstIndex(of: settings.menuBarPVDisplay) ?? 0)
+        detachedPVPopup.selectItem(at: PVDisplayMode.allCases.firstIndex(of: settings.detachedPVDisplay) ?? 0)
         warnBatteryButton.state = settings.warnBatteryLowEnabled ? .on : .off
         warnBatteryThresholdField.stringValue = String(settings.warnBatteryLowThreshold)
         warnPVStallButton.state = settings.warnPVStallEnabled ? .on : .off
@@ -1215,9 +1239,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.dashboardWindowLevel = levelModes[max(0, min(levelModes.count - 1, dashboardLevelPopup.indexOfSelectedItem))]
         settings.graphWindowLevel = levelModes[max(0, min(levelModes.count - 1, graphLevelPopup.indexOfSelectedItem))]
         settings.updateCheckEnabled = updateCheckButton.state == .on
-        settings.showPerPVValues = perPVButton.state == .on
-        settings.menuBarPerPVWatts = menuBarPerPVButton.state == .on
-        settings.detachedPerPVWatts = detachedPerPVButton.state == .on
+        let pvModes = PVDisplayMode.allCases
+        settings.dashboardPVDisplay = pvModes[max(0, min(pvModes.count - 1, dashboardPVPopup.indexOfSelectedItem))]
+        settings.menuBarPVDisplay = pvModes[max(0, min(pvModes.count - 1, menuBarPVPopup.indexOfSelectedItem))]
+        settings.detachedPVDisplay = pvModes[max(0, min(pvModes.count - 1, detachedPVPopup.indexOfSelectedItem))]
         settings.warnBatteryLowEnabled = warnBatteryButton.state == .on
         if let threshold = Int(warnBatteryThresholdField.stringValue) {
             settings.warnBatteryLowThreshold = threshold
@@ -1324,7 +1349,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showSymbols: settings.showMenuBarMetricSymbols,
             showArrows: settings.showEnergyFlowArrows,
             showColors: settings.showFlowColors,
-            perPVWatts: settings.menuBarPerPVWatts
+            pvDisplay: settings.menuBarPVDisplay
         )
         let stripWidth: CGFloat = 560
         let stripHeight: CGFloat = 28

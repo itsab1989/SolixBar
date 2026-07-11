@@ -146,6 +146,25 @@ enum HistoryRange: String, CaseIterable {
 
 /// Fensterebene der frei platzierbaren Fenster (Slim-Bar, abgedocktes
 /// Dashboard): immer vorn, normal im Fensterstapel oder immer hinten.
+/// Darstellung des PV-Werts, wenn die Solarbank ihre MPPT-Kanäle einzeln
+/// meldet: nur Summe, nur Einzelwerte oder beides.
+enum PVDisplayMode: String, CaseIterable, Sendable {
+    case total
+    case perInput
+    case both
+
+    @MainActor var title: String {
+        switch self {
+        case .total:
+            return LocalizedText.text("Gesamtwert", "Total")
+        case .perInput:
+            return LocalizedText.text("Einzelwerte", "Individual inputs")
+        case .both:
+            return LocalizedText.text("Gesamt + Einzelwerte", "Total + individual")
+        }
+    }
+}
+
 enum WindowLevelMode: String, CaseIterable {
     case alwaysOnTop
     case normal
@@ -217,9 +236,9 @@ struct AppSettingsSnapshot: Equatable {
     var dashboardWindowLevel: WindowLevelMode
     var graphWindowLevel: WindowLevelMode
     var updateCheckEnabled: Bool
-    var showPerPVValues: Bool
-    var menuBarPerPVWatts: Bool
-    var detachedPerPVWatts: Bool
+    var dashboardPVDisplay: PVDisplayMode
+    var menuBarPVDisplay: PVDisplayMode
+    var detachedPVDisplay: PVDisplayMode
     var warnBatteryLowEnabled: Bool
     var warnBatteryLowThreshold: Int
     var warnPVStallEnabled: Bool
@@ -548,23 +567,38 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "updateCheckEnabled") }
     }
 
-    /// PV-Wert im Dashboard als Einzelwerte je Eingang statt Summe
-    /// (nur bei Modellen mit Kanal-Reporting).
-    var showPerPVValues: Bool {
-        get { followBool("showPerPVValues", fallback: false) }
-        set { defaults.set(newValue, forKey: "showPerPVValues") }
+    /// PV-Anzeige je Fläche (Summe/Einzelwerte/beides). Die kurzlebigen
+    /// Bool-Vorgänger aus der 0.4.2-Testphase werden als Fallback gelesen.
+    var dashboardPVDisplay: PVDisplayMode {
+        get { pvDisplayMode(forKey: "dashboardPVDisplay", legacyBoolKey: "showPerPVValues") }
+        set { defaults.set(newValue.rawValue, forKey: "dashboardPVDisplay") }
     }
 
-    /// PV-Wert in der Menüleiste als Einzelwerte je Eingang statt Summe.
-    var menuBarPerPVWatts: Bool {
-        get { followBool("menuBarPerPVWatts", fallback: false) }
-        set { defaults.set(newValue, forKey: "menuBarPerPVWatts") }
+    var menuBarPVDisplay: PVDisplayMode {
+        get { pvDisplayMode(forKey: "menuBarPVDisplay", legacyBoolKey: "menuBarPerPVWatts") }
+        set { defaults.set(newValue.rawValue, forKey: "menuBarPVDisplay") }
     }
 
     /// Abgedockte Leiste; folgt der Menüleisten-Option, bis explizit gesetzt.
-    var detachedPerPVWatts: Bool {
-        get { followBool("detachedPerPVWatts", fallback: menuBarPerPVWatts) }
-        set { defaults.set(newValue, forKey: "detachedPerPVWatts") }
+    var detachedPVDisplay: PVDisplayMode {
+        get {
+            if let raw = defaults.string(forKey: "detachedPVDisplay"),
+               let mode = PVDisplayMode(rawValue: raw) {
+                return mode
+            }
+            if defaults.object(forKey: "detachedPerPVWatts") != nil {
+                return defaults.bool(forKey: "detachedPerPVWatts") ? .perInput : .total
+            }
+            return menuBarPVDisplay
+        }
+        set { defaults.set(newValue.rawValue, forKey: "detachedPVDisplay") }
+    }
+
+    private func pvDisplayMode(forKey key: String, legacyBoolKey: String) -> PVDisplayMode {
+        if let raw = defaults.string(forKey: key), let mode = PVDisplayMode(rawValue: raw) {
+            return mode
+        }
+        return defaults.bool(forKey: legacyBoolKey) ? .perInput : .total
     }
 
     // MARK: Warnungen (alle opt-in — ein Update darf nicht unaufgefordert
@@ -690,9 +724,9 @@ final class AppSettings {
             dashboardWindowLevel: dashboardWindowLevel,
             graphWindowLevel: graphWindowLevel,
             updateCheckEnabled: updateCheckEnabled,
-            showPerPVValues: showPerPVValues,
-            menuBarPerPVWatts: menuBarPerPVWatts,
-            detachedPerPVWatts: detachedPerPVWatts,
+            dashboardPVDisplay: dashboardPVDisplay,
+            menuBarPVDisplay: menuBarPVDisplay,
+            detachedPVDisplay: detachedPVDisplay,
             warnBatteryLowEnabled: warnBatteryLowEnabled,
             warnBatteryLowThreshold: warnBatteryLowThreshold,
             warnPVStallEnabled: warnPVStallEnabled,
@@ -742,9 +776,9 @@ final class AppSettings {
         dashboardWindowLevel = snapshot.dashboardWindowLevel
         graphWindowLevel = snapshot.graphWindowLevel
         updateCheckEnabled = snapshot.updateCheckEnabled
-        showPerPVValues = snapshot.showPerPVValues
-        menuBarPerPVWatts = snapshot.menuBarPerPVWatts
-        detachedPerPVWatts = snapshot.detachedPerPVWatts
+        dashboardPVDisplay = snapshot.dashboardPVDisplay
+        menuBarPVDisplay = snapshot.menuBarPVDisplay
+        detachedPVDisplay = snapshot.detachedPVDisplay
         warnBatteryLowEnabled = snapshot.warnBatteryLowEnabled
         warnBatteryLowThreshold = snapshot.warnBatteryLowThreshold
         warnPVStallEnabled = snapshot.warnPVStallEnabled

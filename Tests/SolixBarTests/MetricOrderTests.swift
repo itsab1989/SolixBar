@@ -41,8 +41,8 @@ struct MetricOrderTests {
         #expect(settings.barMetrics == [.solar, .battery])
     }
 
-    @Test("per-PV option shows channel watts instead of the sum")
-    func perPVWatts() {
+    @Test("PV display modes: total, per input, and both")
+    func pvDisplayModes() {
         let formatter = MenuBarFormatter()
         var options = MenuBarDisplayOptions(
             metrics: [.solar],
@@ -52,36 +52,39 @@ struct MetricOrderTests {
             showColors: false
         )
         var snapshot = SolixSnapshot.demo
+        snapshot.solarWatts = 642
         snapshot.pvWatts = [438, 204]
 
-        options.perPVWatts = true
+        options.pvDisplay = .perInput
         #expect(formatter.plainTitle(for: snapshot, options: options) == "438·204W")
         // Kompaktansicht nutzt dieselben Einzelwerte, mit Pfeil wenn aktiv.
         options.showArrows = true
         let stacked = formatter.stackedEntries(for: snapshot, options: options)
         #expect(stacked.first?.text == "↓438·204W")
-
-        // Ohne Kanalwerte (Solarbank 1) fällt die Anzeige auf die Summe zurück.
-        snapshot.pvWatts = nil
         options.showArrows = false
-        #expect(formatter.plainTitle(for: snapshot, options: options) == "\(snapshot.solarWatts ?? 0)W")
 
-        // Option aus: Summe wie bisher.
-        options.perPVWatts = false
+        options.pvDisplay = .both
+        #expect(formatter.plainTitle(for: snapshot, options: options) == "642W (438·204)")
+
+        // Ohne Kanalwerte (Solarbank 1) fällt jede Einstellung auf die Summe zurück.
+        snapshot.pvWatts = nil
+        #expect(formatter.plainTitle(for: snapshot, options: options) == "642W")
+
+        options.pvDisplay = .total
         snapshot.pvWatts = [438, 204]
-        #expect(formatter.plainTitle(for: snapshot, options: options) == "\(snapshot.solarWatts ?? 0)W")
+        #expect(formatter.plainTitle(for: snapshot, options: options) == "642W")
     }
 
-    @Test("per-PV settings survive the snapshot/apply round-trip and follow chain")
-    func perPVSettingsRoundTrip() {
+    @Test("PV display settings survive the snapshot/apply round-trip")
+    func pvDisplaySettingsRoundTrip() {
         let settings = AppSettings.shared
         let original = settings.snapshot()
         defer { settings.apply(original) }
 
         var modified = original
-        modified.menuBarPerPVWatts = true
-        modified.detachedPerPVWatts = true
-        modified.showPerPVValues = true
+        modified.dashboardPVDisplay = .both
+        modified.menuBarPVDisplay = .perInput
+        modified.detachedPVDisplay = .total
         settings.apply(modified)
         #expect(settings.snapshot() == modified)
     }

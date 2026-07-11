@@ -195,13 +195,19 @@ final class HistoryGraphView: NSView {
     }
 
     private func startLineAnimation() {
-        animationTimer = Timer.scheduledTimer(
+        // .common statt Default-Modus: Während ein Menü offen ist, läuft der
+        // Runloop im Tracking-Modus — dort feuerte der Timer nicht, der
+        // Fortschritt blieb bei 0 und die Linien waren beim ersten Öffnen
+        // nach einem Neuaufbau (z. B. Einstellungsänderung) unsichtbar.
+        let timer = Timer(
             timeInterval: 1.0 / 30.0,
             target: self,
             selector: #selector(tickLineAnimation(_:)),
             userInfo: nil,
             repeats: true
         )
+        RunLoop.main.add(timer, forMode: .common)
+        animationTimer = timer
     }
 
     @objc private func tickLineAnimation(_ timer: Timer) {

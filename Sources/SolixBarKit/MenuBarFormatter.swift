@@ -212,13 +212,25 @@ final class MenuBarFormatter {
         options.showLabels ? "\(metric.localizedShortTitle) \(value)" : value
     }
 
-    /// PV-Wert: Summe ("642W") oder Einzelwerte je Eingang ("438·204W"),
-    /// wenn die Option aktiv ist und der Snapshot Kanäle meldet.
+    /// PV-Wert nach Anzeige-Modus: Summe ("642W"), Einzelwerte je Eingang
+    /// ("438·204W") oder beides ("642W (438·204)"). Ohne Kanalwerte im
+    /// Snapshot bleibt es bei der Summe.
     private func solarValueText(for snapshot: SolixSnapshot, options: MenuBarDisplayOptions) -> String? {
-        if options.perPVWatts, let channels = snapshot.pvWatts, channels.count > 1 {
-            return channels.map(String.init).joined(separator: "·") + "W"
+        let sum = snapshot.solarWatts.map { "\($0)W" }
+        guard options.pvDisplay != .total,
+              let channels = snapshot.pvWatts, channels.count > 1 else {
+            return sum
         }
-        return snapshot.solarWatts.map { "\($0)W" }
+        let individual = channels.map(String.init).joined(separator: "·")
+        switch options.pvDisplay {
+        case .perInput:
+            return individual + "W"
+        case .both:
+            guard let sum else { return individual + "W" }
+            return "\(sum) (\(individual))"
+        case .total:
+            return sum
+        }
     }
 
     /// Kompaktwert für die zweizeilige Anzeige: nur Zahl + Einheit, die

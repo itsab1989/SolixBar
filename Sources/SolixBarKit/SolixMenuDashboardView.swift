@@ -102,12 +102,14 @@ final class SolixMenuDashboardView: NSView {
             batteryColor,
             plateColor: Theme.vivid(Theme.battery(percent: snapshot.batteryPercent))
         )
-        // PV-Wert wahlweise als Einzelwerte je Eingang ("438 · 204 W") statt
-        // Summe; der Trend-Pfeil bezieht sich weiterhin auf die Summe.
+        // PV-Kachel je nach Modus: Summe, Einzelwerte ("438 · 204 W") oder
+        // Summe in der Kachel plus Einzelwerte-Zeile in den Details.
+        // Der Trend-Pfeil bezieht sich immer auf die Summe.
+        let pvMode = AppSettings.shared.dashboardPVDisplay
+        let pvChannels = (snapshot.pvWatts?.count ?? 0) > 1 ? snapshot.pvWatts : nil
         let solarValue: String?
-        if AppSettings.shared.showPerPVValues,
-           let pvWatts = snapshot.pvWatts, pvWatts.count > 1 {
-            solarValue = pvWatts.map(String.init).joined(separator: " · ") + " W"
+        if pvMode == .perInput, let pvChannels {
+            solarValue = pvChannels.map(String.init).joined(separator: " · ") + " W"
         } else {
             solarValue = snapshot.solarWatts.map { "\($0) W" }
         }
@@ -127,7 +129,18 @@ final class SolixMenuDashboardView: NSView {
         primaryRow.spacing = 12
         primaryRow.distribution = .fillEqually
 
-        var detailRows = [
+        var detailRows: [NSView] = []
+        // Modus "Gesamt + Einzelwerte": Summe bleibt in der Kachel, die
+        // Eingänge bekommen eine eigene Detail-Zeile.
+        if pvMode == .both, let pvChannels {
+            detailRows.append(compactMetricRow(
+                LocalizedText.text("PV-Eingänge", "PV Inputs"),
+                pvChannels.map { "\($0) W" }.joined(separator: " · "),
+                "sun.max",
+                Theme.vivid(.solar)
+            ))
+        }
+        detailRows += [
             compactMetricRow(
                 LocalizedText.text("Hauslast", "Home Load"),
                 withTrend(snapshot.homeWatts.map { "\($0) W" }, arrow: trendArrow(current: snapshot.homeWatts, previous: previous?.homeWatts, threshold: 5)),
