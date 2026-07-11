@@ -31,7 +31,7 @@ final class SolixMenuDashboardView: NSView {
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
-        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: style == .window ? 648 : 622))
+        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: style == .window ? 672 : 646))
         wantsLayer = true
         layer?.backgroundColor = backgroundColor.cgColor
         layer?.cornerRadius = Theme.radiusPanel

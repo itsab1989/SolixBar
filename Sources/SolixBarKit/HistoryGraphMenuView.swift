@@ -31,7 +31,7 @@ final class HistoryGraphMenuView: NSView {
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
-        super.init(frame: NSRect(x: 0, y: 0, width: 396, height: 300))
+        super.init(frame: NSRect(x: 0, y: 0, width: 396, height: 324))
         wantsLayer = true
         layer?.cornerRadius = Theme.radiusCard
         layer?.masksToBounds = true
@@ -95,13 +95,13 @@ final class HistoryGraphMenuView: NSView {
         }
 
         NSLayoutConstraint.activate([
-            // Titel links, Zeitraum-Chips schließen Baseline-bündig an,
-            // Legende darunter — alle an einer gemeinsamen linken Kante.
+            // Titel oben, darunter die Zeitraum-Chips, darunter die Legende —
+            // drei Zeilen an einer gemeinsamen linken Kante.
+            title.topAnchor.constraint(equalTo: topAnchor, constant: 12),
             title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
-            title.firstBaselineAnchor.constraint(equalTo: rangeRow.firstBaselineAnchor),
 
-            rangeRow.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-            rangeRow.leadingAnchor.constraint(equalTo: title.trailingAnchor, constant: 12),
+            rangeRow.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 8),
+            rangeRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
             rangeRow.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -14),
 
             legendRow.topAnchor.constraint(equalTo: rangeRow.bottomAnchor, constant: 8),
