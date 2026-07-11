@@ -183,16 +183,24 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         return true
     }
 
+    /// Breite aus den echten Layout-Maßen von DetachedMenuBarView ableiten —
+    /// die frühere Schätzung (plus 260-pt-Mindestbreite) ließ rechts sichtbar
+    /// Leerraum stehen.
     private func targetSize(for attributedText: NSAttributedString?, stackedImage: NSImage?, screen: NSScreen?) -> NSSize {
         let textWidth = ceil(stackedImage?.size.width ?? attributedText?.size().width ?? 152)
         let scale = AppSettings.shared.detachedMenuBarScale
-        let iconWidth: CGFloat = AppSettings.shared.detachedShowIcon ? round(34 * scale) : 0
-        let closeWidth: CGFloat = AppSettings.shared.lockDetachedMenuBar ? 0 : round(44 * scale)
-        let horizontalPadding: CGFloat = round(34 * scale)
-        let width = textWidth + iconWidth + closeWidth + horizontalPadding
+        let iconWidth: CGFloat = AppSettings.shared.detachedShowIcon
+            ? round(24 * scale) + round(10 * scale)   // Icon + Stack-Abstand
+            : 0
+        let leading = round(14 * scale)
+        // Rechts: fixiert nur Randabstand; sonst Lücke + Hover-Schließknopf + Rand.
+        let trailing: CGFloat = AppSettings.shared.lockDetachedMenuBar
+            ? round(14 * scale)
+            : 10 + round(28 * scale) + round(8 * scale)
+        let width = leading + iconWidth + textWidth + trailing
         let visibleWidth = screen?.visibleFrame.width ?? 900
         let height = min(68, max(44, round(44 * scale)))
-        return NSSize(width: min(max(width, 260), visibleWidth - 24), height: height)
+        return NSSize(width: min(max(width, 200), visibleWidth - 24), height: height)
     }
 
     private func positionBelowMenuBar(anchor: NSRect?) {
