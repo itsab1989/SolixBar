@@ -14,18 +14,28 @@ enum StackedMenuBarRenderer {
         let role: ColorRole
     }
 
-    static func image(entries: [Entry], scale: Double, showWarning: Bool) -> NSImage? {
+    /// - Parameters:
+    ///   - brightPalette: feste helle Farben für dauerhaft dunkle Flächen
+    ///     (abgedockte Leiste) statt der System-adaptiven Menüleistenfarben.
+    ///   - height: Gesamthöhe; die Schriftgröße wird darauf gedeckelt, damit
+    ///     zwei Zeilen nie überlappen (Menüleiste: 22 pt).
+    static func image(
+        entries: [Entry],
+        scale: Double,
+        showWarning: Bool,
+        brightPalette: Bool = false,
+        height: CGFloat = 22
+    ) -> NSImage? {
         guard !entries.isEmpty else { return nil }
         let half = (entries.count + 1) / 2
         let rows = [Array(entries.prefix(half)), Array(entries.dropFirst(half))]
             .filter { !$0.isEmpty }
 
-        let fontSize = round(9 * scale)
+        let fontSize = min(round(9 * scale), floor(height / 2) - 2)
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
-        let glyphHeight = round(8 * scale)
+        let glyphHeight = round(fontSize * 0.9)
         let entryGap = round(7 * scale)
         let glyphGap = round(2 * scale)
-        let height: CGFloat = 22
 
         // Glyphenbreite folgt dem natürlichen Seitenverhältnis des Symbols —
         // ein Batteriesymbol (~1,7:1) in ein Quadrat zu zeichnen staucht es.
@@ -61,7 +71,7 @@ enum StackedMenuBarRenderer {
                 var x: CGFloat = 1
                 for (index, entry) in row.enumerated() {
                     if index > 0 { x += entryGap }
-                    let color = Theme.color(entry.role)
+                    let color = brightPalette ? Theme.bright(entry.role) : Theme.color(entry.role)
                     if let glyph = NSImage(systemSymbolName: entry.symbolName, accessibilityDescription: nil)?
                         .withSymbolConfiguration(.init(pointSize: glyphHeight, weight: .bold)) {
                         let tinted = tint(glyph, with: color)
@@ -90,7 +100,7 @@ enum StackedMenuBarRenderer {
             if showWarning {
                 let attributes: [NSAttributedString.Key: Any] = [
                     .font: NSFont.systemFont(ofSize: round(9 * scale), weight: .bold),
-                    .foregroundColor: Theme.color(.batteryMedium)
+                    .foregroundColor: brightPalette ? Theme.bright(.batteryMedium) : Theme.color(.batteryMedium)
                 ]
                 ("⚠" as NSString).draw(
                     at: NSPoint(x: width - warningWidth, y: height / 2 - round(6 * scale)),

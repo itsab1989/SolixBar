@@ -29,6 +29,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let autostartStatus = NSTextField(labelWithString: "")
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
     private let stackedButton = NSButton(checkboxWithTitle: "Zweizeilige Kompaktanzeige", target: nil, action: nil)
+    private let stackedDetachedButton = NSButton(checkboxWithTitle: "Abgedockte Leiste: Kompaktanzeige", target: nil, action: nil)
     private let showLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
     private let showMetricSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
     private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Pfeile beim Energiefluss anzeigen", target: nil, action: nil)
@@ -109,7 +110,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, showIconButton, stackedButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, showIconButton, stackedButton, stackedDetachedButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -120,6 +121,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         autostartStatus.lineBreakMode = .byTruncatingMiddle
         showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
         stackedButton.toolTip = "Zeigt die Werte in zwei kompakten Zeilen übereinander — halbe Breite bei gleicher Information, praktisch auf MacBooks mit Notch."
+        stackedDetachedButton.toolTip = "Nutzt die zweizeilige Kompaktanzeige auch in der abgedockten Leiste — macht sie etwa halb so lang."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
         showEnergyFlowArrowsButton.toolTip = "Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus."
@@ -197,6 +199,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         if appearanceIndex >= 0 { appearancePopup.selectItem(at: appearanceIndex) }
         showIconButton.title = LocalizedText.text("App-Symbol in der Menüleiste anzeigen", "Show app icon in the menu bar")
         stackedButton.title = LocalizedText.text("Zweizeilige Kompaktanzeige", "Two-line compact display")
+        stackedDetachedButton.title = LocalizedText.text("Abgedockte Leiste: Kompaktanzeige", "Detached bar: compact display")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
         showEnergyFlowArrowsButton.title = LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction")
@@ -211,6 +214,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
         let showIconRow = settingRow(showIconButton, help: showIconButton.toolTip ?? "")
         let stackedRow = settingRow(stackedButton, help: stackedButton.toolTip ?? "")
+        let stackedDetachedRow = settingRow(stackedDetachedButton, help: stackedDetachedButton.toolTip ?? "")
         let showLabelsRow = settingRow(showLabelsButton, help: showLabelsButton.toolTip ?? "")
         let showMetricSymbolsRow = settingRow(showMetricSymbolsButton, help: showMetricSymbolsButton.toolTip ?? "")
         let showEnergyFlowArrowsRow = settingRow(showEnergyFlowArrowsButton, help: showEnergyFlowArrowsButton.toolTip ?? "")
@@ -228,7 +232,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         detachedScaleValue.alignment = .right
         detachedScaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, lockDetachedMenuBarRow, scaleRow, detachedScaleRow] {
+        for view in [metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, stackedDetachedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, lockDetachedMenuBarRow, scaleRow, detachedScaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -250,7 +254,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             stackedRow.topAnchor.constraint(equalTo: showIconRow.bottomAnchor, constant: 8),
             stackedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            showLabelsRow.topAnchor.constraint(equalTo: stackedRow.bottomAnchor, constant: 8),
+            stackedDetachedRow.topAnchor.constraint(equalTo: stackedRow.bottomAnchor, constant: 8),
+            stackedDetachedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            showLabelsRow.topAnchor.constraint(equalTo: stackedDetachedRow.bottomAnchor, constant: 8),
             showLabelsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             showMetricSymbolsRow.topAnchor.constraint(equalTo: showLabelsRow.bottomAnchor, constant: 8),
@@ -620,6 +627,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         loadSolixCredentials()
         showIconButton.state = settings.showMenuBarIcon ? .on : .off
         stackedButton.state = settings.menuBarStacked ? .on : .off
+        stackedDetachedButton.state = settings.detachedBarStacked ? .on : .off
         showLabelsButton.state = settings.showMetricLabels ? .on : .off
         showMetricSymbolsButton.state = settings.showMenuBarMetricSymbols ? .on : .off
         showEnergyFlowArrowsButton.state = settings.showEnergyFlowArrows ? .on : .off
@@ -673,6 +681,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.barMetrics = BarMetric.allCases.filter { metricButtons[$0]?.state == .on }
         settings.showMenuBarIcon = showIconButton.state == .on
         settings.menuBarStacked = stackedButton.state == .on
+        settings.detachedBarStacked = stackedDetachedButton.state == .on
         settings.showMetricLabels = showLabelsButton.state == .on
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
         settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on

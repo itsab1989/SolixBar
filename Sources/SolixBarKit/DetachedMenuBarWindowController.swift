@@ -361,11 +361,19 @@ private final class DetachedMenuBarView: NSView {
         }
     }
 
+    /// Dezentes Bolt-Glyph wie in der Menüleiste — das bunte App-Icon-PNG
+    /// wirkte auf dem dunklen HUD grell und fremd.
     private func appIcon() -> NSImage? {
-        let image = Bundle.main.url(forResource: "SolixBar", withExtension: "png")
-            .flatMap { NSImage(contentsOf: $0) }
-        let size = round(24 * settings.detachedMenuBarScale)
-        return image.map { roundedIconImage($0, size: size) }
+        let image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "SOLIX")?
+            .withSymbolConfiguration(.init(pointSize: round(14 * settings.detachedMenuBarScale), weight: .semibold))
+        guard let image else { return nil }
+        let tinted = image.copy() as? NSImage ?? image
+        tinted.isTemplate = false
+        tinted.lockFocus()
+        NSColor.white.withAlphaComponent(0.85).set()
+        NSRect(origin: .zero, size: tinted.size).fill(using: .sourceAtop)
+        tinted.unlockFocus()
+        return tinted
     }
 
     /// Löst Farben über das semantische Rollen-Attribut (.solixRole) auf,

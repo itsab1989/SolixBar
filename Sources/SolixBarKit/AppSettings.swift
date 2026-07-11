@@ -175,6 +175,7 @@ struct AppSettingsSnapshot {
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
     var menuBarStacked: Bool
+    var detachedBarStacked: Bool
     var showMenuBarIcon: Bool
     var showMetricLabels: Bool
     var showMenuBarMetricSymbols: Bool
@@ -244,9 +245,18 @@ final class AppSettings {
         defaults.set(true, forKey: key)
     }
 
+    /// Kompaktanzeige ist Standard: informationsdicht und notch-sicher.
     var menuBarStacked: Bool {
-        get { defaults.bool(forKey: "menuBarStacked") }
+        get {
+            guard defaults.object(forKey: "menuBarStacked") != nil else { return true }
+            return defaults.bool(forKey: "menuBarStacked")
+        }
         set { defaults.set(newValue, forKey: "menuBarStacked") }
+    }
+
+    var detachedBarStacked: Bool {
+        get { defaults.bool(forKey: "detachedBarStacked") }
+        set { defaults.set(newValue, forKey: "detachedBarStacked") }
     }
 
     var showMenuBarIcon: Bool {
@@ -361,6 +371,7 @@ final class AppSettings {
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
             menuBarStacked: menuBarStacked,
+            detachedBarStacked: detachedBarStacked,
             showMenuBarIcon: showMenuBarIcon,
             showMetricLabels: showMetricLabels,
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
@@ -385,6 +396,7 @@ final class AppSettings {
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
         menuBarStacked = snapshot.menuBarStacked
+        detachedBarStacked = snapshot.detachedBarStacked
         showMenuBarIcon = snapshot.showMenuBarIcon
         showMetricLabels = snapshot.showMetricLabels
         showMenuBarMetricSymbols = snapshot.showMenuBarMetricSymbols

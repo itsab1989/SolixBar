@@ -1061,14 +1061,16 @@ final class StatusController: NSObject {
                     )
                 },
                 stackedImageProvider: { [weak self] in
-                    guard let self, self.settings.menuBarStacked,
+                    guard let self, self.settings.detachedBarStacked,
                           let snapshot = self.currentSnapshot() else { return nil }
                     let entries = self.stackedEntries(for: snapshot, options: self.settingsDisplayOptions)
                     guard entries.count >= 2 else { return nil }
                     return StackedMenuBarRenderer.image(
                         entries: entries,
-                        scale: self.settings.detachedMenuBarScale * 1.25,
-                        showWarning: self.lastError != nil
+                        scale: self.settings.detachedMenuBarScale * 1.3,
+                        showWarning: self.lastError != nil,
+                        brightPalette: true,
+                        height: round(30 * self.settings.detachedMenuBarScale)
                     )
                 },
                 onClose: { [weak self] in
