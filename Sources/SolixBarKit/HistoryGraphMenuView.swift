@@ -45,6 +45,10 @@ final class HistoryGraphMenuView: NSView {
     }
 
     private func buildView() {
+        let title = NSTextField(labelWithString: LocalizedText.text("Verlauf", "History"))
+        title.font = .boldSystemFont(ofSize: 13)
+        title.textColor = .labelColor
+
         let rangeRow = NSStackView()
         rangeRow.orientation = .horizontal
         rangeRow.spacing = 4
@@ -85,16 +89,19 @@ final class HistoryGraphMenuView: NSView {
             legendRow.addArrangedSubview(chip)
         }
 
-        for view in [rangeRow, legendRow, customDaysField, graphContainer] {
+        for view in [title, rangeRow, legendRow, customDaysField, graphContainer] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
 
         NSLayoutConstraint.activate([
-            // Zeitraum-Chips linksbündig oben, Legende direkt darunter —
-            // beide Steuerzeilen teilen sich eine linke Kante.
+            // Titel links, Zeitraum-Chips schließen Baseline-bündig an,
+            // Legende darunter — alle an einer gemeinsamen linken Kante.
+            title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            title.firstBaselineAnchor.constraint(equalTo: rangeRow.firstBaselineAnchor),
+
             rangeRow.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-            rangeRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
+            rangeRow.leadingAnchor.constraint(equalTo: title.trailingAnchor, constant: 12),
             rangeRow.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -14),
 
             legendRow.topAnchor.constraint(equalTo: rangeRow.bottomAnchor, constant: 8),
