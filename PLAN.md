@@ -71,11 +71,11 @@ visueller Abnahme.
 - Trend-Indikatoren (▲▼) in den Dashboard-Karten.
 - Hover-Tooltip mit exakten Werten im großen Graphen.
 
-## Phase 5 — Abschluss (wartet auf visuelle Abnahme)
+## Phase 5 — Abschluss ✅ (2026-07-11)
 
-- [ ] Nutzer prüft App + Renders visuell.
-- [ ] PR im Fork (Vorher/Nachher-Bilder).
-- [ ] Upstream-Issue bei `Ravaners/SolixBar`: KI-freundlich strukturiert (Datei:Zeile, Repro, Akzeptanzkriterien je Paket), freundlich und ausführlich; verweist auf Branch/Commits im Fork, damit der Maintainer je Befund wählen kann: übernehmen / selbst anders umsetzen / verwerfen; Demo-Render-Screenshots (auch Design-Varianten, falls vorhanden); Bitte um Live-Test mit echtem Gerät; keinerlei private Daten.
+- [x] Nutzer hat App + Renders visuell abgenommen (mehrere Iterationsrunden, siehe Design-Runde 2/3).
+- [x] PR im Fork mit Vorher/Nachher-Bildern: https://github.com/itsab1989/SolixBar/pull/1
+- [x] Upstream-Issue: https://github.com/Ravaners/SolixBar/issues/3 (Arbeitspakete mit Datei:Zeile, Repro, Akzeptanzkriterien, Referenz-Commits, Demo-Renders, Icon-Vorschlag, Hardware-Test-Bitte, Optionen-Frage).
 
 ## Teststrategie (Querschnitt)
 
