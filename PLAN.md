@@ -89,6 +89,18 @@ visueller Abnahme.
 - [x] CI: Releases bekommen automatisch einen Commit-Changelog seit dem vorherigen Tag.
 - [x] Veröffentlichung: PR gegen Upstream (Ravaners/SolixBar#4), Issue #3 zu einem konsolidierten Beitrag umgeschrieben (natürliches Deutsch, aktuelle Bilder, Optionen-Prompt für die Maintainer-KI), Release v0.4.1 mit Changelog.
 
+## Phase 7 — Funktionsrunde v0.4.2 (2026-07-11)
+
+- [x] Update-Check: täglicher GitHub-Releases-Abgleich, einmalige Mitteilung pro Version + dauerhafter Menüpunkt; abschaltbar. `UpdateChecker.isNewer` mit Test-Matrix.
+- [x] Benachrichtigungs-Infrastruktur: `NotificationManager` (Bundle-Guard — unbundled crasht UserNotifications; Lazy-Autorisierung, Klick öffnet URL). `package_app.sh` signiert ad-hoc wie die CI.
+- [x] Verlaufsfenster abdockbar: Menüpunkt-Toggle, onClose-Muster wie Slim-Bar, Frame-Autosave, Offen-Zustand überlebt Neustart, Fensterebene wählbar.
+- [x] History + Export: Samples erfassen zusätzlich Hauslast/Akku-Fluss (abwärtskompatibel); "Daten exportieren ..." mit CSV/JSON-Format-Popup im Speichern-Dialog.
+- [x] Pro-PV: `pvWatts` durch die ganze Pipeline (Python → Decoder → Dashboard-Zeile, abschaltbar); Demo simuliert 2 Kanäle inkl. Ausfallfenster Minute 40–45. Ohne Hardware unverifiziert (Hinweis an Maintainer).
+- [x] Warnungen (opt-in, eigener Tab): Akku-Schwelle mit Hysterese, PV-Einbruch-Heuristik (nachts still), optionales Tagesfenster, tote MPPT-Kanäle; Mitteilung + ⚠-Menüeinträge. Reine `WarningEngine` mit 8 Szenario-Tests (intervallunabhängig).
+- [x] Vier Metrik-Listen mit Drag & Drop: Auswahl + Reihenfolge je Leiste und je Ansicht (einzeilig/kompakt); Kompakt folgt einzeilig bis zur Entkopplung; keine Reihenfolge-Normalisierung mehr beim Speichern; Leisten-Tabs zweispaltig.
+- [x] Version automatisch: `VERSION`-Datei → Info.plist beim Packen (PlistBuddy, Build-Nummer aus Commit-Zähler); CI verweigert Tags, die nicht zur `VERSION` passen.
+- [ ] Live-Abnahme durch Nutzer; danach PR #4 + Issue #3 aktualisieren, Tag v0.4.2.
+
 ## Teststrategie (Querschnitt)
 
 | Ebene | Werkzeug | Deckt ab |

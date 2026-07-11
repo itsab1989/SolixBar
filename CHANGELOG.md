@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.2 - 2026-07-11
+
+- DE: Update-Hinweis: SolixBar prüft täglich die GitHub-Releases und meldet eine neuere Version einmalig per macOS-Mitteilung plus dauerhaftem Menüpunkt ("Update verfügbar"). Abschaltbar unter App → "Automatisch nach Updates suchen". Installiert wird nichts automatisch.
+- EN: Update notice: SolixBar checks the GitHub releases daily and reports a newer version once via macOS notification plus a persistent menu entry ("Update available"). Can be disabled under App → "Check for updates automatically". Nothing is installed automatically.
+- DE: Verlaufsfenster abdockbar: neuer Menüpunkt "Verlauf abdocken" öffnet den großen Graphen als eigenes Fenster; Position und Offen-Zustand überleben einen Neustart, die Fensterebene (vorn/normal/hinten) ist wie bei Dashboard und Slim-Bar wählbar.
+- EN: Detachable history window: a new "Detach history graph" menu entry opens the large graph as its own window; position and open state survive a restart, and the window level (front/normal/behind) is selectable like for the dashboard and slim bar.
+- DE: Datenexport: "Daten exportieren ..." schreibt die gespeicherte History der aktiven Datenquelle als CSV (für Excel/Numbers) oder JSON — Formatwahl direkt im Speichern-Dialog. Die History erfasst jetzt zusätzlich Hauslast und Akku-Fluss; ältere Dateien bleiben lesbar.
+- EN: Data export: "Export data ..." writes the stored history of the active data source as CSV (for Excel/Numbers) or JSON — format selectable right in the save dialog. History now also records home load and battery flow; older files stay readable.
+- DE: Warnungen (alle standardmäßig aus, Tab "Warnungen"): Akku unter Schwelle (einmalig, mit Hysterese), PV-Einbruch (0 W obwohl kürzlich erzeugt wurde — nachts still), optionales Tagesfenster und Überwachung einzelner PV-Eingänge. Zustellung als macOS-Mitteilung plus ⚠-Eintrag im Menü, solange die Bedingung anhält.
+- EN: Warnings (all off by default, "Warnings" tab): battery below threshold (fires once, with hysteresis), PV collapse (0 W despite recent production — silent at night), optional daytime window, and monitoring of individual PV inputs. Delivered as macOS notifications plus a ⚠ menu entry while the condition persists.
+- DE: Leistung je PV-Eingang: `solix_snapshot.py` reicht die MPPT-Kanäle (`solar_power_1..4`) als `pvWatts` durch; das Dashboard zeigt "PV-Eingänge 438 W · 204 W" (abschaltbar). Hinweis: Feldnamen laut anker-solix-api, mangels Hardware unverifiziert — Solarbank 2 Pro/3 melden 4 Kanäle, Solarbank 2 Plus/AC 2, die erste Generation keine.
+- EN: Per-PV-input power: `solix_snapshot.py` forwards the MPPT channels (`solar_power_1..4`) as `pvWatts`; the dashboard shows "PV Inputs 438 W · 204 W" (can be disabled). Note: field names per anker-solix-api, unverified without hardware — Solarbank 2 Pro/3 report 4 channels, Solarbank 2 Plus/AC 2, the first generation none.
+- DE: Werte-Auswahl mit Reihenfolge: Statt fester Häkchen-Raster gibt es sortierbare Listen (Häkchen wählt aus, Ziehen ordnet) — getrennt für Menüleiste und abgedockte Leiste sowie jeweils für einzeilige und Kompaktansicht. Die Kompakt-Listen folgen der einzeiligen, bis man sie entkoppelt.
+- EN: Value selection with ordering: the fixed checkbox grids are now sortable lists (checkbox selects, dragging reorders) — separate for the menu bar and the detached bar, and for the single-line and compact views. Compact lists follow the single-line list until decoupled.
+- DE: Version wird beim Packen automatisch aus der `VERSION`-Datei in die App geschrieben (Anzeige in Einstellungen/Menü stimmt ab jetzt immer); die CI bricht ab, wenn ein Release-Tag nicht zur `VERSION`-Datei passt. Lokal gepackte Bundles werden ad-hoc signiert, damit Mitteilungen funktionieren.
+- EN: The version is injected from the `VERSION` file at packaging time (the settings/menu display is now always correct); CI fails when a release tag does not match the `VERSION` file. Locally packaged bundles are ad-hoc signed so notifications work.
+
+## 0.4.1 - 2026-07-11
+
+- DE: Nutzer-Feedback-Runde: Fensterebene wählbar (Slim-Bar und Dashboard getrennt), Schließen-Kreuz der Slim-Bar nur bei Hover, "Farbige Werte" und "Flussrichtung" getrennt schaltbar je Leiste, Sammel-Metrik "Energiefluss" entfernt (Migration aktiviert die Pfeil-Option), Kompaktansicht mit Richtungspfeilen und Status-Metrik, Slim-Bar-Breite aus echten Layout-Maßen. Releases erhalten automatisch einen Commit-Changelog.
+- EN: User-feedback round: selectable window level (slim bar and dashboard separately), slim-bar close button only on hover, "colored values" and "flow direction" toggle separately per bar, composite "energy flow" metric removed (migration enables the arrows option), compact view with direction arrows and status metric, slim-bar width from real layout metrics. Releases automatically get a commit changelog.
+
 ## 0.4.0 - 2026-07-11
 
 - DE: Statusitem weicht der Notch aus: Auf MacBooks mit Notch verdichtet sich die Menüleisten-Anzeige automatisch stufenweise (ohne Bezeichnungen -> ohne Symbole -> kompakt), bis sie vollständig sichtbar ist. Vorher konnte das Item komplett hinter der Notch verschwinden.
