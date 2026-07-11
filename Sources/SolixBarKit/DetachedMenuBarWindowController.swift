@@ -9,6 +9,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     private let onClose: () -> Void
     private var didNotifyClose = false
     private var wantsVisible = false
+    private var snapDebounce: Timer?
 
     init(
         attributedBarProvider: @escaping () -> NSAttributedString?,
@@ -72,8 +73,12 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         var frame = oldFrame
         frame.size = targetSize
         if let screen = window.screen {
-            frame.origin.x = min(screen.visibleFrame.maxX - targetSize.width - 8, max(screen.visibleFrame.minX + 8, frame.origin.x))
-            frame.origin.y = min(screen.visibleFrame.maxY - targetSize.height - 6, max(screen.visibleFrame.minY + 8, frame.origin.y))
+            // Position des Nutzers respektieren: nur sicherstellen, dass ein
+            // greifbarer Teil (60 pt) sichtbar bleibt, statt die Leiste hart
+            // an den Rand zu klemmen.
+            let visible = screen.visibleFrame
+            frame.origin.x = min(visible.maxX - 60, max(visible.minX + 60 - targetSize.width, frame.origin.x))
+            frame.origin.y = min(visible.maxY - targetSize.height, max(visible.minY, frame.origin.y))
         }
         window.setFrame(frame, display: true)
     }
@@ -84,6 +89,46 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     }
 
     func windowDidMove(_ notification: Notification) {
+        saveCurrentPosition()
+        scheduleEdgeSnap()
+    }
+
+    /// Magnetisches Einrasten an Bildschirmkanten (8 pt Abstand), entprellt,
+    /// damit es erst nach dem Loslassen greift und nicht am Cursor klebt.
+    private func scheduleEdgeSnap() {
+        guard !settings.lockDetachedMenuBar else { return }
+        snapDebounce?.invalidate()
+        snapDebounce = Timer.scheduledTimer(withTimeInterval: 0.30, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.snapToNearbyEdge()
+            }
+        }
+    }
+
+    private func snapToNearbyEdge() {
+        guard let window, let screen = window.screen else { return }
+        let threshold: CGFloat = 18
+        let margin: CGFloat = 8
+        let visible = screen.visibleFrame
+        var frame = window.frame
+        var snapped = false
+
+        if abs(frame.minX - visible.minX) < threshold {
+            frame.origin.x = visible.minX + margin
+            snapped = true
+        } else if abs(frame.maxX - visible.maxX) < threshold {
+            frame.origin.x = visible.maxX - frame.width - margin
+            snapped = true
+        }
+        if abs(frame.minY - visible.minY) < threshold {
+            frame.origin.y = visible.minY + margin
+            snapped = true
+        } else if abs(frame.maxY - visible.maxY) < threshold {
+            frame.origin.y = visible.maxY - frame.height - margin
+            snapped = true
+        }
+        guard snapped, frame != window.frame else { return }
+        window.setFrame(frame, display: true, animate: true)
         saveCurrentPosition()
     }
 
@@ -119,8 +164,9 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         guard let screen = NSScreen.screens.first(where: { $0.visibleFrame.intersects(saved) }) ?? NSScreen.main else { return false }
         var frame = saved
         frame.size = targetSize(for: attributedBarProvider(), stackedImage: stackedImageProvider(), screen: screen)
-        frame.origin.x = min(screen.visibleFrame.maxX - frame.width - 8, max(screen.visibleFrame.minX + 8, frame.origin.x))
-        frame.origin.y = min(screen.visibleFrame.maxY - frame.height - 6, max(screen.visibleFrame.minY + 8, frame.origin.y))
+        let visible = screen.visibleFrame
+        frame.origin.x = min(visible.maxX - 60, max(visible.minX + 60 - frame.width, frame.origin.x))
+        frame.origin.y = min(visible.maxY - frame.height, max(visible.minY, frame.origin.y))
         window.setFrame(frame, display: true)
         return true
     }

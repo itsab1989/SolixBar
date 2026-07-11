@@ -31,9 +31,7 @@ final class HistoryGraphView: NSView {
         super.init(frame: NSRect(origin: .zero, size: size))
         wantsLayer = true
         layer?.cornerRadius = 12
-        layer?.backgroundColor = graphBackground.cgColor
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
+        layer?.masksToBounds = true
         toolTip = LocalizedText.text(
             "Zeigt die aktivierten Werte im gewählten Zeitraum. Klick öffnet die große Ansicht.",
             "Shows the enabled values for the selected period. Click to open the large view."
@@ -116,7 +114,7 @@ final class HistoryGraphView: NSView {
     }
 
     private func drawBackground() {
-        let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 12, yRadius: 12)
+        let path = NSBezierPath(roundedRect: bounds, xRadius: 12, yRadius: 12)
         if let gradient = NSGradient(colors: [graphBackgroundTop, graphBackground]) {
             gradient.draw(in: path, angle: -90)
         } else {
@@ -480,8 +478,14 @@ final class HistoryGraphView: NSView {
         }
     }
 
+    /// Etwas kräftiger als der Systemtrenner, damit die Rasterlinien in beiden
+    /// Modi als Ablesehilfe taugen, ohne die Kurven zu stören.
     private var gridLineColor: NSColor {
-        NSColor.separatorColor.withAlphaComponent(0.45)
+        NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(calibratedWhite: 1.0, alpha: 0.18)
+                : NSColor(calibratedWhite: 0.0, alpha: 0.16)
+        }
     }
 
     private var axisColor: NSColor {

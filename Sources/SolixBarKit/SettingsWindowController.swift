@@ -41,6 +41,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let appearancePopup = NSPopUpButton()
     private let languagePopup = NSPopUpButton()
     private var metricButtons: [BarMetric: NSButton] = [:]
+    private var detachedMetricButtons: [BarMetric: NSButton] = [:]
     private var originalSettings: AppSettingsSnapshot?
     private var originalAutostart = false
     private var isSaving = false
@@ -137,6 +138,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let tabs = NSTabView()
         tabs.tabViewType = .topTabsBezelBorder
         tabs.addTabViewItem(tab(title: LocalizedText.text("Menüleiste", "Menu Bar"), view: menuBarPane()))
+        tabs.addTabViewItem(tab(title: LocalizedText.text("Abgedockte Leiste", "Detached Bar"), view: detachedPane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("Datenquelle", "Data Source"), view: dataSourcePane()))
         tabs.addTabViewItem(tab(title: LocalizedText.text("App", "App"), view: appPane()))
 
@@ -210,7 +212,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func menuBarPane() -> NSView {
         let container = NSView()
         let metricTitle = sectionTitle(LocalizedText.text("Angezeigte Werte", "Visible Values"))
-        let metricGrid = buildMetricGrid()
+        let metricGrid = buildMetricGrid(for: .menuBar)
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
         let showIconRow = settingRow(showIconButton, help: showIconButton.toolTip ?? "")
         let stackedRow = settingRow(stackedButton, help: stackedButton.toolTip ?? "")
@@ -218,21 +220,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let showLabelsRow = settingRow(showLabelsButton, help: showLabelsButton.toolTip ?? "")
         let showMetricSymbolsRow = settingRow(showMetricSymbolsButton, help: showMetricSymbolsButton.toolTip ?? "")
         let showEnergyFlowArrowsRow = settingRow(showEnergyFlowArrowsButton, help: showEnergyFlowArrowsButton.toolTip ?? "")
-        let lockDetachedMenuBarRow = settingRow(lockDetachedMenuBarButton, help: lockDetachedMenuBarButton.toolTip ?? "")
         let scaleRow = NSStackView(views: [label(LocalizedText.text("Skalierung", "Scale")), scaleSlider, scaleValue, helpButton(labelTooltip("Skalierung"))])
         scaleRow.orientation = .horizontal
         scaleRow.spacing = 12
         scaleRow.alignment = .centerY
         scaleValue.alignment = .right
         scaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
-        let detachedScaleRow = NSStackView(views: [label(LocalizedText.text("Abgedockt", "Detached")), detachedScaleSlider, detachedScaleValue, helpButton(labelTooltip("Abgedockt"))])
-        detachedScaleRow.orientation = .horizontal
-        detachedScaleRow.spacing = 12
-        detachedScaleRow.alignment = .centerY
-        detachedScaleValue.alignment = .right
-        detachedScaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, stackedDetachedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, lockDetachedMenuBarRow, scaleRow, detachedScaleRow] {
+        for view in [metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, scaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -254,10 +249,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             stackedRow.topAnchor.constraint(equalTo: showIconRow.bottomAnchor, constant: 8),
             stackedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            stackedDetachedRow.topAnchor.constraint(equalTo: stackedRow.bottomAnchor, constant: 8),
-            stackedDetachedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-
-            showLabelsRow.topAnchor.constraint(equalTo: stackedDetachedRow.bottomAnchor, constant: 8),
+            showLabelsRow.topAnchor.constraint(equalTo: stackedRow.bottomAnchor, constant: 8),
             showLabelsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             showMetricSymbolsRow.topAnchor.constraint(equalTo: showLabelsRow.bottomAnchor, constant: 8),
@@ -266,16 +258,64 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showEnergyFlowArrowsRow.topAnchor.constraint(equalTo: showMetricSymbolsRow.bottomAnchor, constant: 8),
             showEnergyFlowArrowsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            lockDetachedMenuBarRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 8),
-            lockDetachedMenuBarRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-
-            scaleRow.topAnchor.constraint(equalTo: lockDetachedMenuBarRow.bottomAnchor, constant: 16),
+            scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 16),
             scaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
+            scaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
+        ])
 
-            detachedScaleRow.topAnchor.constraint(equalTo: scaleRow.bottomAnchor, constant: 10),
+        return container
+    }
+
+    /// Eigener Tab für die abgedockte Leiste: eigene Werte-Auswahl,
+    /// Kompaktanzeige, Fixieren und Skalierung.
+    private func detachedPane() -> NSView {
+        let container = NSView()
+        let metricTitle = sectionTitle(LocalizedText.text("Angezeigte Werte", "Visible Values"))
+        let metricGrid = buildMetricGrid(for: .detachedBar)
+        let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
+        let stackedDetachedRow = settingRow(stackedDetachedButton, help: stackedDetachedButton.toolTip ?? "")
+        let lockRow = settingRow(lockDetachedMenuBarButton, help: lockDetachedMenuBarButton.toolTip ?? "")
+        let detachedScaleRow = NSStackView(views: [label(LocalizedText.text("Skalierung", "Scale")), detachedScaleSlider, detachedScaleValue, helpButton(labelTooltip("Abgedockt"))])
+        detachedScaleRow.orientation = .horizontal
+        detachedScaleRow.spacing = 12
+        detachedScaleRow.alignment = .centerY
+        detachedScaleValue.alignment = .right
+        detachedScaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
+        let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
+            "Die Leiste lässt sich frei verschieben: einfach am Hintergrund ziehen. Fixieren verhindert versehentliches Verschieben.",
+            "Move the bar anywhere by dragging its background. Locking prevents accidental moves."
+        ))
+        hint.textColor = .secondaryLabelColor
+
+        for view in [metricTitle, metricGrid, displayTitle, stackedDetachedRow, lockRow, detachedScaleRow, hint] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(view)
+        }
+
+        NSLayoutConstraint.activate([
+            metricTitle.topAnchor.constraint(equalTo: container.topAnchor, constant: 22),
+            metricTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            metricGrid.topAnchor.constraint(equalTo: metricTitle.bottomAnchor, constant: 10),
+            metricGrid.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            metricGrid.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -24),
+
+            displayTitle.topAnchor.constraint(equalTo: metricGrid.bottomAnchor, constant: 24),
+            displayTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            stackedDetachedRow.topAnchor.constraint(equalTo: displayTitle.bottomAnchor, constant: 10),
+            stackedDetachedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            lockRow.topAnchor.constraint(equalTo: stackedDetachedRow.bottomAnchor, constant: 8),
+            lockRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            detachedScaleRow.topAnchor.constraint(equalTo: lockRow.bottomAnchor, constant: 16),
             detachedScaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
-            detachedScaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
+            detachedScaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
+
+            hint.topAnchor.constraint(equalTo: detachedScaleRow.bottomAnchor, constant: 18),
+            hint.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+            hint.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
 
         return container
@@ -408,7 +448,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     }
 
 
-    private func buildMetricGrid() -> NSGridView {
+    private enum MetricGridTarget {
+        case menuBar
+        case detachedBar
+    }
+
+    private func buildMetricGrid(for target: MetricGridTarget) -> NSGridView {
         let rows = [
             [BarMetric.battery, .solar, .home],
             [BarMetric.grid, .batteryFlow, .flow],
@@ -417,7 +462,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             metrics.map { metric in
                 let button = NSButton(checkboxWithTitle: localizedMetricTitle(metric), target: self, action: #selector(applyPreview))
                 button.toolTip = metricTooltip(metric)
-                metricButtons[metric] = button
+                switch target {
+                case .menuBar:
+                    metricButtons[metric] = button
+                case .detachedBar:
+                    detachedMetricButtons[metric] = button
+                }
                 return settingRow(button, help: metricTooltip(metric))
             }
         }
@@ -641,6 +691,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         for metric in BarMetric.allCases {
             metricButtons[metric]?.state = selected.contains(metric) ? .on : .off
         }
+        let detachedSelected = Set(settings.detachedBarMetrics)
+        for metric in BarMetric.allCases {
+            detachedMetricButtons[metric]?.state = detachedSelected.contains(metric) ? .on : .off
+        }
         refreshAutostartState()
         updateDataSourceFieldVisibility()
         isLoading = false
@@ -679,6 +733,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.urlString = urlField.stringValue
         settings.refreshInterval = TimeInterval(max(60, intervalField.integerValue))
         settings.barMetrics = BarMetric.allCases.filter { metricButtons[$0]?.state == .on }
+        settings.detachedBarMetrics = BarMetric.allCases.filter { detachedMetricButtons[$0]?.state == .on }
         settings.showMenuBarIcon = showIconButton.state == .on
         settings.menuBarStacked = stackedButton.state == .on
         settings.detachedBarStacked = stackedDetachedButton.state == .on

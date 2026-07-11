@@ -54,6 +54,23 @@ visueller Abnahme.
 - `swift test` funktioniert mit reinen CLT (kein Xcode nötig) — gut für Contributor.
 - Schema-Vertrag `solix_snapshot.py` ↔ Decoder verifiziert (alle 10 Felder). End-to-End mit echter Anker-Cloud bleibt ohne Gerät unverifizierbar → Bitte an Maintainer.
 
+## Design-Runde 2 (Nutzer-Feedback vom 2026-07-11, umgesetzt)
+
+- [x] Abgedocktes Dashboard: eigener Fensterrahmen (Panel = Fenster, transparente Titelleiste, schwebende Ampeln) statt doppelter Ecken; keine Konturlinie.
+- [x] Zweizeilige Kompaktanzeige (Menüleiste, Default an; abgedockte Leiste separat schaltbar), Bright-Palette + dynamische Höhe für die dunkle Leiste, Glyphen mit korrektem Seitenverhältnis.
+- [x] Eigener Settings-Tab "Abgedockte Leiste" mit unabhängiger Werte-Auswahl; klickbare Hilfe-Popovers statt toter "?"-Labels.
+- [x] Notch-Regression behoben (Preview-Reset + unbrauchbare Frames versteckter Items) — per App-Log diagnostiziert.
+- [x] Graph: Innen-Box aufgelöst (nur Grundlinie), kräftigere Rasterlinien in beiden Modi; kartenweite Konturen entfernt (Tiefe über Flächen).
+- [x] Slim-Bar: einheitliche Schriftgröße, dezentes Bolt-Glyph statt App-Icon-PNG, Symbol-Close-Button, magnetisches Kanten-Einrasten, lockere Positions-Klemmung.
+- [x] Dashboard: Zeitstempel färbt sich orange bei überfälligen Daten.
+- [x] App-Icon-Vorschlag (weißer Blitz auf Bernstein→Grün-Verlauf) als Bilder generiert — Entscheidung offen (Original behalten / ersetzen / beides ins Issue).
+
+## Optionale visuelle Ideen (für Maintainer-Issue, nicht umgesetzt)
+
+- Live-Vorschau der Menüleisten-Anzeige in den Einstellungen (braucht Extraktion des Formatters aus StatusController).
+- Trend-Indikatoren (▲▼) in den Dashboard-Karten.
+- Hover-Tooltip mit exakten Werten im großen Graphen.
+
 ## Phase 5 — Abschluss (wartet auf visuelle Abnahme)
 
 - [ ] Nutzer prüft App + Renders visuell.

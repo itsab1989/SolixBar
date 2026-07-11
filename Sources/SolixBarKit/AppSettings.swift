@@ -174,6 +174,7 @@ struct AppSettingsSnapshot {
     var urlString: String
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
+    var detachedBarMetrics: [BarMetric]
     var menuBarStacked: Bool
     var detachedBarStacked: Bool
     var showMenuBarIcon: Bool
@@ -233,6 +234,21 @@ final class AppSettings {
         set {
             let metrics = newValue.isEmpty ? defaultBarMetrics : newValue
             defaults.set(metrics.map(\.rawValue), forKey: "barMetrics")
+        }
+    }
+
+    /// Werte der abgedockten Leiste; folgt der Menüleisten-Auswahl, bis der
+    /// Nutzer sie explizit anpasst.
+    var detachedBarMetrics: [BarMetric] {
+        get {
+            guard let values = defaults.array(forKey: "detachedBarMetrics") as? [String] else {
+                return barMetrics
+            }
+            let metrics = values.compactMap(BarMetric.init(rawValue:))
+            return metrics.isEmpty ? barMetrics : metrics
+        }
+        set {
+            defaults.set(newValue.map(\.rawValue), forKey: "detachedBarMetrics")
         }
     }
 
@@ -370,6 +386,7 @@ final class AppSettings {
             urlString: urlString,
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
+            detachedBarMetrics: detachedBarMetrics,
             menuBarStacked: menuBarStacked,
             detachedBarStacked: detachedBarStacked,
             showMenuBarIcon: showMenuBarIcon,
@@ -395,6 +412,7 @@ final class AppSettings {
         urlString = snapshot.urlString
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
+        detachedBarMetrics = snapshot.detachedBarMetrics
         menuBarStacked = snapshot.menuBarStacked
         detachedBarStacked = snapshot.detachedBarStacked
         showMenuBarIcon = snapshot.showMenuBarIcon

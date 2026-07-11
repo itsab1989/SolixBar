@@ -223,6 +223,15 @@ final class StatusController: NSObject {
         )
     }
 
+    private var detachedDisplayOptions: MenuBarDisplayOptions {
+        MenuBarDisplayOptions(
+            metrics: settings.detachedBarMetrics,
+            showLabels: settings.showMetricLabels,
+            showSymbols: settings.showMenuBarMetricSymbols,
+            showArrows: settings.showEnergyFlowArrows
+        )
+    }
+
     private func applyTitle(for snapshot: SolixSnapshot, level: MenuBarDisplayLevel) {
         let options = settingsDisplayOptions.applying(level)
 
@@ -877,11 +886,10 @@ final class StatusController: NSObject {
     }
 
     private func textAttachment(_ string: String, color: NSColor = .labelColor, weight: NSFont.Weight = .medium, scale: Double, role: ColorRole? = nil) -> NSAttributedString {
+        // Einheitliche Schriftgröße für alle Läufe — die frühere 13,5-pt-
+        // Sonderbehandlung der Pfeiltexte erzeugte sichtbar gemischte Größen.
         var attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(
-                ofSize: round((string.contains("↓") || string.contains("↑") || string.contains("←") || string.contains("→")) ? 13.5 * scale : 13 * scale),
-                weight: weight
-            ),
+            .font: NSFont.monospacedDigitSystemFont(ofSize: round(13 * scale), weight: weight),
             .foregroundColor: color,
             .shadow: menuBarTextShadow
         ]
@@ -1057,13 +1065,13 @@ final class StatusController: NSObject {
                     return self.barAttributedText(
                         for: snapshot,
                         scale: self.settings.detachedMenuBarScale,
-                        options: self.settingsDisplayOptions
+                        options: self.detachedDisplayOptions
                     )
                 },
                 stackedImageProvider: { [weak self] in
                     guard let self, self.settings.detachedBarStacked,
                           let snapshot = self.currentSnapshot() else { return nil }
-                    let entries = self.stackedEntries(for: snapshot, options: self.settingsDisplayOptions)
+                    let entries = self.stackedEntries(for: snapshot, options: self.detachedDisplayOptions)
                     guard entries.count >= 2 else { return nil }
                     return StackedMenuBarRenderer.image(
                         entries: entries,

@@ -98,8 +98,6 @@ final class SolixMenuDashboardView: NSView {
         details.wantsLayer = true
         details.layer?.cornerRadius = Theme.radiusCard
         details.layer?.backgroundColor = panelColor.cgColor
-        details.layer?.borderWidth = 1
-        details.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
         detailsContainer = details
 
         let graph = HistoryGraphMenuView(
@@ -150,7 +148,6 @@ final class SolixMenuDashboardView: NSView {
                 layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
             }
             detailsContainer?.layer?.backgroundColor = panelColor.cgColor
-            detailsContainer?.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
         }
         needsDisplay = true
     }
@@ -167,7 +164,13 @@ final class SolixMenuDashboardView: NSView {
         updatedTimer?.invalidate()
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.updatedLabel?.stringValue = self?.updatedText() ?? ""
+                guard let self else { return }
+                self.updatedLabel?.stringValue = self.updatedText()
+                // Überfällige Daten sichtbar machen: orange ab dem doppelten
+                // Aktualisierungsintervall.
+                let age = Date().timeIntervalSince(self.snapshot.updatedAt)
+                let staleAfter = max(120, AppSettings.shared.refreshInterval * 2)
+                self.updatedLabel?.textColor = age > staleAfter ? .systemOrange : .secondaryLabelColor
             }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -200,10 +203,8 @@ final class SolixMenuDashboardView: NSView {
         panel.toolTip = tooltip(for: title, value: value)
         panel.wantsLayer = true
         panel.layer?.cornerRadius = Theme.radiusCard
-        panel.baseColor = panelBackground(for: color, strength: 0.18)
-        panel.highlightColor = panelBackground(for: color, strength: 0.28)
-        panel.layer?.borderWidth = 1
-        panel.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
+        panel.baseColor = panelBackground(for: color, strength: 0.22)
+        panel.highlightColor = panelBackground(for: color, strength: 0.30)
 
         let iconPlate = iconPlate(symbol: symbol, color: color, size: 36, pointSize: 21)
         let titleLabel = NSTextField(labelWithString: title)

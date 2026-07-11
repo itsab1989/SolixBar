@@ -18,9 +18,8 @@ final class HistoryGraphMenuView: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 396, height: 282))
         wantsLayer = true
         layer?.cornerRadius = Theme.radiusCard
+        layer?.masksToBounds = true
         layer?.backgroundColor = menuBackground.cgColor
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
         buildView()
         reload()
     }
@@ -202,7 +201,6 @@ final class HistoryGraphMenuView: NSView {
         super.viewDidChangeEffectiveAppearance()
         effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
             layer?.backgroundColor = menuBackground.cgColor
-            layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.6).cgColor
         }
         needsDisplay = true
     }
