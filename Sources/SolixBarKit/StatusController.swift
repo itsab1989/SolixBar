@@ -17,6 +17,7 @@ final class StatusController: NSObject {
     private var isTerminating = false
     private var isRefreshing = false
     private var displayLevel: MenuBarDisplayLevel = .full
+    private var lastDisplaySignature = ""
     private var refreshAnimationTimer: Timer?
     private var refreshAnimationFrame = 0
     private let refreshFrames = ["↻", "↺"]
@@ -135,6 +136,29 @@ final class StatusController: NSObject {
         refreshAnimationTimer = timer
     }
 
+    /// Kompaktwert für die zweizeilige Anzeige: nur Zahl + Einheit, die
+    /// Metrik-Identität trägt das Glyph.
+    private func stackedText(for metric: BarMetric, snapshot: SolixSnapshot) -> String? {
+        switch metric {
+        case .battery:
+            return snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
+        case .solar:
+            return snapshot.solarWatts.map { "\($0)W" } ?? "--W"
+        case .home:
+            return snapshot.homeWatts.map { "\($0)W" } ?? "--W"
+        case .grid:
+            return snapshot.gridWatts.map { "\($0)W" } ?? "--W"
+        case .batteryFlow:
+            return snapshot.batteryWatts.map { "\($0 > 0 ? "+" : "")\($0)W" } ?? "--W"
+        case .today:
+            return snapshot.todayKWh.map { String(format: "%.1fk", $0) }
+        case .total:
+            return snapshot.totalKWh.map { String(format: "%.0fk", $0) }
+        case .flow, .status:
+            return nil
+        }
+    }
+
     private func stopRefreshAnimation() {
         refreshAnimationTimer?.invalidate()
         refreshAnimationTimer = nil
@@ -188,6 +212,33 @@ final class StatusController: NSObject {
 
     private func applyTitle(for snapshot: SolixSnapshot, level: MenuBarDisplayLevel) {
         let options = settingsDisplayOptions.applying(level)
+
+        if settings.menuBarStacked {
+            let entries = visibleBarMetrics(for: snapshot, options: options)
+                .filter { $0 != .flow && $0 != .status }
+                .compactMap { metric -> StackedMenuBarRenderer.Entry? in
+                    guard let text = stackedText(for: metric, snapshot: snapshot) else { return nil }
+                    return StackedMenuBarRenderer.Entry(
+                        symbolName: symbol(for: metric, snapshot: snapshot),
+                        text: text,
+                        role: roleTag(for: metric, snapshot: snapshot)
+                    )
+                }
+            if entries.count >= 2,
+               let image = StackedMenuBarRenderer.image(
+                   entries: entries,
+                   scale: settings.menuBarScale,
+                   showWarning: lastError != nil
+               ) {
+                item.button?.image = image
+                item.button?.imagePosition = .imageOnly
+                item.button?.attributedTitle = NSAttributedString()
+                return
+            }
+        }
+        // Normale einzeilige Darstellung: Icon-Zustand wiederherstellen,
+        // falls zuvor das gestapelte Bild aktiv war.
+        updateMenuBarIcon()
         let warn = lastError == nil ? "" : " ⚠"
 
         if options.metrics.isEmpty {
@@ -217,13 +268,32 @@ final class StatusController: NSObject {
     /// Prüft nach dem Layout, ob das Item in die Notch-Zone ragt, und
     /// verdichtet die Anzeige stufenweise, bis es passt. macOS würde ein
     /// überlappendes Item sonst komplett ausblenden.
-    private func enforceNotchFit(with snapshot: SolixSnapshot) {
+    private func enforceNotchFit(with snapshot: SolixSnapshot, attempt: Int = 0) {
         // Kurze Verzögerung: die Menüleiste positioniert das Item erst nach
         // dem Setzen des Titels neu; ein sofortiger Check sähe veraltete Frames.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) { [weak self] in
             guard let self else { return }
-            guard let frame = self.statusButtonFrameOnScreen() else { return }
-            guard let notch = NotchGeometry.notchRect(on: self.item.button?.window?.screen) else { return }
+            let screen = self.item.button?.window?.screen ?? NSScreen.main
+            guard let notch = NotchGeometry.notchRect(on: screen) else { return }
+
+            let frame = self.statusButtonFrameOnScreen()
+            let isUsable = frame.map { $0.width > 1 && $0.minX > 1 } ?? false
+            guard let frame, isUsable else {
+                // Kein brauchbarer Frame: entweder ist das Layout noch nicht
+                // fertig (kurz erneut versuchen) oder macOS hat das Item
+                // bereits hinter der Notch versteckt — dann hilft nur
+                // Verdichten, sonst bleibt die Anzeige dauerhaft unsichtbar.
+                if attempt < 4 {
+                    self.enforceNotchFit(with: snapshot, attempt: attempt + 1)
+                } else if let next = self.displayLevel.next {
+                    AppLogger.info("Status item frame unusable (likely hidden behind the notch): degrading to level \(next.rawValue).")
+                    self.displayLevel = next
+                    self.applyTitle(for: snapshot, level: next)
+                    self.enforceNotchFit(with: snapshot)
+                }
+                return
+            }
+
             guard NotchGeometry.overlaps(
                 itemMinX: frame.minX,
                 itemMaxX: frame.maxX,
@@ -1049,7 +1119,23 @@ final class StatusController: NSObject {
     }
 
     private func applyCurrentSettings(refreshNow: Bool) {
-        displayLevel = .full
+        // Verdichtungsstufe nur zurücksetzen, wenn sich anzeige-relevante
+        // Optionen geändert haben. Sonst blendet z. B. das Umschalten von
+        // "Leiste fixieren" das Item kurz in voller Breite ein, macOS
+        // versteckt es hinter der Notch, und die Anzeige verschwindet.
+        let signature = [
+            settings.barMetrics.map(\.rawValue).joined(separator: ","),
+            String(settings.showMetricLabels),
+            String(settings.showMenuBarMetricSymbols),
+            String(settings.showEnergyFlowArrows),
+            String(settings.showMenuBarIcon),
+            String(settings.menuBarStacked),
+            String(settings.menuBarScale)
+        ].joined(separator: "|")
+        if signature != lastDisplaySignature {
+            lastDisplaySignature = signature
+            displayLevel = .full
+        }
         scheduleRefreshTimer()
         applyAppearance()
         updateMenuBarIcon()

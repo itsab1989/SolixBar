@@ -128,3 +128,42 @@ struct RenderTests {
         return nil
     }
 }
+
+@MainActor
+@Suite("Stacked menu bar renders")
+struct StackedRenderTests {
+    @Test("two-line compact image renders in light and dark")
+    func stackedImage() throws {
+        let entries: [StackedMenuBarRenderer.Entry] = [
+            .init(symbolName: "battery.75percent", text: "82%", role: .batteryHigh),
+            .init(symbolName: "sun.max.fill", text: "642W", role: .solar),
+            .init(symbolName: "house.fill", text: "318W", role: .load),
+            .init(symbolName: "powerplug.fill", text: "-86W", role: .gridExport)
+        ]
+        let image = try #require(StackedMenuBarRenderer.image(entries: entries, scale: 1.0, showWarning: false))
+        #expect(image.size.width > 40 && image.size.width < 260)
+
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let appearance = try #require(NSAppearance(named: name))
+            let canvas = NSImage(size: NSSize(width: image.size.width + 12, height: 28))
+            canvas.lockFocus()
+            appearance.performAsCurrentDrawingAppearance {
+                (suffix == "dark"
+                    ? NSColor(calibratedWhite: 0.12, alpha: 1)
+                    : NSColor(calibratedWhite: 0.94, alpha: 1)).setFill()
+                NSRect(origin: .zero, size: canvas.size).fill()
+                image.draw(
+                    in: NSRect(x: 6, y: 3, width: image.size.width, height: 22),
+                    from: .zero,
+                    operation: .sourceOver,
+                    fraction: 1
+                )
+            }
+            canvas.unlockFocus()
+            let tiff = try #require(canvas.tiffRepresentation)
+            let rep = try #require(NSBitmapImageRep(data: tiff))
+            let png = try #require(rep.representation(using: .png, properties: [:]))
+            try png.write(to: RenderTests.outputDir.appendingPathComponent("menubar-stacked-\(suffix).png"))
+        }
+    }
+}

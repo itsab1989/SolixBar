@@ -19,7 +19,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let commandRow = NSStackView()
     private let urlRow = NSStackView()
     private let solixTitle = NSTextField(labelWithString: "SOLIX Login")
-    private let solixHint = NSTextField(wrappingLabelWithString: "Nur für den vorbereiteten SOLIX-Befehl. Mail und Passwort werden lokal gespeichert.")
+    private let solixHint = NSTextField(wrappingLabelWithString: "Nur für den vorbereiteten SOLIX-Befehl. Das Passwort liegt im macOS-Schlüsselbund, Mail und Land in einer lokalen Datei.")
     private let solixEmailRow = NSStackView()
     private let solixPasswordRow = NSStackView()
     private let solixCountryRow = NSStackView()
@@ -28,6 +28,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
+    private let stackedButton = NSButton(checkboxWithTitle: "Zweizeilige Kompaktanzeige", target: nil, action: nil)
     private let showLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
     private let showMetricSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
     private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Pfeile beim Energiefluss anzeigen", target: nil, action: nil)
@@ -93,7 +94,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         solixEmailField.placeholderString = "mail@example.com"
         solixEmailField.toolTip = "E-Mail-Adresse deines Anker/SOLIX-Kontos."
         solixPasswordField.placeholderString = "Passwort"
-        solixPasswordField.toolTip = "Passwort deines Anker/SOLIX-Kontos. Wird lokal in work/solixbar.env gespeichert und nicht hochgeladen."
+        solixPasswordField.toolTip = "Passwort deines Anker/SOLIX-Kontos. Wird sicher im macOS-Schlüsselbund gespeichert und nie hochgeladen."
         solixCountryField.placeholderString = "DE"
         solixCountryField.toolTip = "Land deines Anker-Kontos, normalerweise DE."
         solixTodayBaseField.placeholderString = "z.B. 7.2"
@@ -108,7 +109,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, showIconButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, showIconButton, stackedButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -118,6 +119,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         autostartStatus.textColor = .secondaryLabelColor
         autostartStatus.lineBreakMode = .byTruncatingMiddle
         showIconButton.toolTip = "Zeigt oder versteckt das SolixBar-Symbol in der Menüleiste."
+        stackedButton.toolTip = "Zeigt die Werte in zwei kompakten Zeilen übereinander — halbe Breite bei gleicher Information, praktisch auf MacBooks mit Notch."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
         showEnergyFlowArrowsButton.toolTip = "Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus."
@@ -194,6 +196,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ])
         if appearanceIndex >= 0 { appearancePopup.selectItem(at: appearanceIndex) }
         showIconButton.title = LocalizedText.text("App-Symbol in der Menüleiste anzeigen", "Show app icon in the menu bar")
+        stackedButton.title = LocalizedText.text("Zweizeilige Kompaktanzeige", "Two-line compact display")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
         showEnergyFlowArrowsButton.title = LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction")
@@ -207,6 +210,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let metricGrid = buildMetricGrid()
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
         let showIconRow = settingRow(showIconButton, help: showIconButton.toolTip ?? "")
+        let stackedRow = settingRow(stackedButton, help: stackedButton.toolTip ?? "")
         let showLabelsRow = settingRow(showLabelsButton, help: showLabelsButton.toolTip ?? "")
         let showMetricSymbolsRow = settingRow(showMetricSymbolsButton, help: showMetricSymbolsButton.toolTip ?? "")
         let showEnergyFlowArrowsRow = settingRow(showEnergyFlowArrowsButton, help: showEnergyFlowArrowsButton.toolTip ?? "")
@@ -224,7 +228,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         detachedScaleValue.alignment = .right
         detachedScaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [metricTitle, metricGrid, displayTitle, showIconRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, lockDetachedMenuBarRow, scaleRow, detachedScaleRow] {
+        for view in [metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, lockDetachedMenuBarRow, scaleRow, detachedScaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -243,7 +247,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showIconRow.topAnchor.constraint(equalTo: displayTitle.bottomAnchor, constant: 10),
             showIconRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            showLabelsRow.topAnchor.constraint(equalTo: showIconRow.bottomAnchor, constant: 8),
+            stackedRow.topAnchor.constraint(equalTo: showIconRow.bottomAnchor, constant: 8),
+            stackedRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            showLabelsRow.topAnchor.constraint(equalTo: stackedRow.bottomAnchor, constant: 8),
             showLabelsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             showMetricSymbolsRow.topAnchor.constraint(equalTo: showLabelsRow.bottomAnchor, constant: 8),
@@ -435,17 +442,52 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         return row
     }
 
+    /// Dezentes, klickbares Hilfesymbol: öffnet ein Popover mit dem Hilfetext.
+    /// Vorher: fettes "?"-Textlabel, das klickbar aussah, aber nur einen
+    /// Hover-Tooltip hatte.
     private func helpButton(_ tooltip: String) -> NSButton {
-        let button = NSButton(title: "?", target: nil, action: nil)
+        let button = NSButton(title: "", target: self, action: #selector(showHelpPopover(_:)))
         button.isBordered = false
-        button.font = .systemFont(ofSize: 12, weight: .bold)
-        button.contentTintColor = .secondaryLabelColor
+        button.image = Self.helpGlyph
+        button.contentTintColor = .tertiaryLabelColor
         button.toolTip = tooltip
         button.setButtonType(.momentaryChange)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        button.widthAnchor.constraint(equalToConstant: 18).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 18).isActive = true
         return button
+    }
+
+    private static let helpGlyph: NSImage? = {
+        let image = NSImage(systemSymbolName: "questionmark.circle", accessibilityDescription: "Hilfe")
+        return image?.withSymbolConfiguration(.init(pointSize: 12, weight: .medium))
+    }()
+
+    @objc private func showHelpPopover(_ sender: NSButton) {
+        guard let text = sender.toolTip, !text.isEmpty else { return }
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.font = .systemFont(ofSize: 12)
+        label.textColor = .labelColor
+        label.preferredMaxLayoutWidth = 260
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = NSView()
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.topAnchor.constraint(equalTo: container.topAnchor, constant: 10),
+            label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -10),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            label.widthAnchor.constraint(lessThanOrEqualToConstant: 260)
+        ])
+
+        let controller = NSViewController()
+        controller.view = container
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentViewController = controller
+        popover.contentSize = container.fittingSize
+        popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
     }
 
     private func metricTooltip(_ metric: BarMetric) -> String {
@@ -577,6 +619,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         intervalField.stringValue = String(Int(settings.refreshInterval))
         loadSolixCredentials()
         showIconButton.state = settings.showMenuBarIcon ? .on : .off
+        stackedButton.state = settings.menuBarStacked ? .on : .off
         showLabelsButton.state = settings.showMetricLabels ? .on : .off
         showMetricSymbolsButton.state = settings.showMenuBarMetricSymbols ? .on : .off
         showEnergyFlowArrowsButton.state = settings.showEnergyFlowArrows ? .on : .off
@@ -629,6 +672,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.refreshInterval = TimeInterval(max(60, intervalField.integerValue))
         settings.barMetrics = BarMetric.allCases.filter { metricButtons[$0]?.state == .on }
         settings.showMenuBarIcon = showIconButton.state == .on
+        settings.menuBarStacked = stackedButton.state == .on
         settings.showMetricLabels = showLabelsButton.state == .on
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
         settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on

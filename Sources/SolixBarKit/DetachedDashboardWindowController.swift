@@ -17,15 +17,25 @@ final class DetachedDashboardWindowController: NSWindowController {
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
+        // Eigener Fensterrahmen: Das Panel mit seinem 16-pt-Radius IST das
+        // Fenster (transparenter Hintergrund, ausgeblendete Titelleiste,
+        // schwebende Ampel-Buttons). Ein normaler Fensterrahmen erzeugte
+        // sichtbare "doppelte Ecken" um das randbündige Panel.
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 430, height: 622),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            contentRect: NSRect(x: 0, y: 0, width: 430, height: 648),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "SOLIX Dashboard"
-        window.minSize = NSSize(width: 430, height: 560)
-        window.contentMinSize = NSSize(width: 430, height: 560)
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.isMovableByWindowBackground = true
+        window.hasShadow = true
+        window.minSize = NSSize(width: 430, height: 580)
+        window.contentMinSize = NSSize(width: 430, height: 580)
         window.maxSize = NSSize(width: 760, height: 980)
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -56,6 +66,7 @@ final class DetachedDashboardWindowController: NSWindowController {
         if let snapshot = snapshotProvider() {
             view = SolixMenuDashboardView(
                 snapshot: snapshot,
+                style: .window,
                 graphProvider: graphProvider,
                 onRangeChange: onRangeChange,
                 onOpenLarge: onOpenLarge
@@ -93,6 +104,10 @@ private final class DetachedDashboardPlaceholderView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        layer?.cornerRadius = Theme.radiusPanel
+        layer?.masksToBounds = true
+        layer?.borderWidth = 1
+        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
 
         let label = NSTextField(wrappingLabelWithString: "Noch keine SOLIX-Daten geladen.")
         label.alignment = .center

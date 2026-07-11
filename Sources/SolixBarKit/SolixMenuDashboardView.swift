@@ -2,7 +2,16 @@ import AppKit
 
 @MainActor
 final class SolixMenuDashboardView: NSView {
+    /// Wo das Panel lebt: im Dropdown-Menü (eigener Rahmen) oder als Inhalt
+    /// des abgedockten Fensters (Panel IST der Fensterrahmen; oben Platz für
+    /// die Ampel-Buttons).
+    enum Style {
+        case menu
+        case window
+    }
+
     private let snapshot: SolixSnapshot
+    private let style: Style
     private let graphProvider: () -> [SolixHistorySample]
     private let onRangeChange: () -> Void
     private let onOpenLarge: () -> Void
@@ -12,18 +21,21 @@ final class SolixMenuDashboardView: NSView {
 
     init(
         snapshot: SolixSnapshot,
+        style: Style = .menu,
         graphProvider: @escaping () -> [SolixHistorySample],
         onRangeChange: @escaping () -> Void,
         onOpenLarge: @escaping () -> Void
     ) {
         self.snapshot = snapshot
+        self.style = style
         self.graphProvider = graphProvider
         self.onRangeChange = onRangeChange
         self.onOpenLarge = onOpenLarge
-        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: 622))
+        super.init(frame: NSRect(x: 0, y: 0, width: 430, height: style == .window ? 648 : 622))
         wantsLayer = true
         layer?.backgroundColor = backgroundColor.cgColor
         layer?.cornerRadius = Theme.radiusPanel
+        layer?.masksToBounds = true
         layer?.borderWidth = 1
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
         buildView()
@@ -98,7 +110,7 @@ final class SolixMenuDashboardView: NSView {
         }
 
         NSLayoutConstraint.activate([
-            title.topAnchor.constraint(equalTo: topAnchor, constant: 18),
+            title.topAnchor.constraint(equalTo: topAnchor, constant: style == .window ? 44 : 18),
             title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 18),
             title.trailingAnchor.constraint(lessThanOrEqualTo: status.leadingAnchor, constant: -10),
 

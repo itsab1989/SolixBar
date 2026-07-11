@@ -174,6 +174,7 @@ struct AppSettingsSnapshot {
     var urlString: String
     var refreshInterval: TimeInterval
     var barMetrics: [BarMetric]
+    var menuBarStacked: Bool
     var showMenuBarIcon: Bool
     var showMetricLabels: Bool
     var showMenuBarMetricSymbols: Bool
@@ -241,6 +242,11 @@ final class AppSettings {
             barMetrics.append(.grid)
         }
         defaults.set(true, forKey: key)
+    }
+
+    var menuBarStacked: Bool {
+        get { defaults.bool(forKey: "menuBarStacked") }
+        set { defaults.set(newValue, forKey: "menuBarStacked") }
     }
 
     var showMenuBarIcon: Bool {
@@ -354,6 +360,7 @@ final class AppSettings {
             urlString: urlString,
             refreshInterval: refreshInterval,
             barMetrics: barMetrics,
+            menuBarStacked: menuBarStacked,
             showMenuBarIcon: showMenuBarIcon,
             showMetricLabels: showMetricLabels,
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
@@ -377,6 +384,7 @@ final class AppSettings {
         urlString = snapshot.urlString
         refreshInterval = snapshot.refreshInterval
         barMetrics = snapshot.barMetrics
+        menuBarStacked = snapshot.menuBarStacked
         showMenuBarIcon = snapshot.showMenuBarIcon
         showMetricLabels = snapshot.showMetricLabels
         showMenuBarMetricSymbols = snapshot.showMenuBarMetricSymbols
