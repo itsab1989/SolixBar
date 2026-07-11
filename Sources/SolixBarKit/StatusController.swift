@@ -129,6 +129,9 @@ final class StatusController: NSObject {
     }
 
     private func startRefreshAnimation() {
+        // Animation nur beim Erststart ohne Werte — danach bleibt die
+        // Anzeige während des Refreshs unangetastet.
+        guard currentSnapshot() == nil else { return }
         refreshAnimationFrame = 0
         refreshAnimationTimer?.invalidate()
         let timer = Timer(timeInterval: 0.16, repeats: true) { [weak self] _ in
@@ -201,7 +204,11 @@ final class StatusController: NSObject {
 
     private func updateTitle() {
         if isRefreshing {
-            setStatusAttributedTitle(refreshStatusAttributedTitle(scale: settings.menuBarScale))
+            // Laufende Anzeige nicht verdrängen (kein Breiten-Zucken alle
+            // 5 Minuten); Lade-Feedback nur, solange noch keine Werte da sind.
+            if currentSnapshot() == nil {
+                setStatusAttributedTitle(refreshStatusAttributedTitle(scale: settings.menuBarScale))
+            }
             return
         }
 
@@ -356,8 +363,8 @@ final class StatusController: NSObject {
         menu.addItem(action(LocalizedText.text("Aktualisieren", "Refresh"), #selector(refreshMenuAction), "arrow.clockwise"))
         menu.addItem(action(
             isMenuBarDetached
-                ? LocalizedText.text("Menüleiste andocken", "Dock menu bar")
-                : LocalizedText.text("Menüleiste abdocken", "Detach menu bar"),
+                ? LocalizedText.text("Abgedockte Leiste ausblenden", "Hide detached bar")
+                : LocalizedText.text("Abgedockte Leiste anzeigen", "Show detached bar"),
             #selector(toggleDetachedMenuBar),
             "menubar.rectangle"
         ))
