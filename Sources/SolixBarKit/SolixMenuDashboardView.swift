@@ -104,8 +104,11 @@ final class SolixMenuDashboardView: NSView {
         )
         // PV-Kachel je nach Modus: Summe, Einzelwerte ("438 · 204 W") oder
         // Summe in der Kachel plus Einzelwerte-Zeile in den Details.
-        // Der Trend-Pfeil bezieht sich immer auf die Summe.
-        let pvMode = AppSettings.shared.dashboardPVDisplay
+        // Angedocktes Menü-Dashboard und abgedocktes Fenster haben getrennte
+        // Einstellungen; der Trend-Pfeil bezieht sich immer auf die Summe.
+        let pvMode = style == .window
+            ? AppSettings.shared.detachedDashboardPVDisplay
+            : AppSettings.shared.dashboardPVDisplay
         let pvChannels = (snapshot.pvWatts?.count ?? 0) > 1 ? snapshot.pvWatts : nil
         let solarValue: String?
         if pvMode == .perInput, let pvChannels {

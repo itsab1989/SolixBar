@@ -83,6 +83,7 @@ struct MetricOrderTests {
 
         var modified = original
         modified.dashboardPVDisplay = .both
+        modified.detachedDashboardPVDisplay = .perInput
         modified.menuBarPVDisplay = .perInput
         modified.detachedPVDisplay = .total
         settings.apply(modified)

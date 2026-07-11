@@ -237,6 +237,7 @@ struct AppSettingsSnapshot: Equatable {
     var graphWindowLevel: WindowLevelMode
     var updateCheckEnabled: Bool
     var dashboardPVDisplay: PVDisplayMode
+    var detachedDashboardPVDisplay: PVDisplayMode
     var menuBarPVDisplay: PVDisplayMode
     var detachedPVDisplay: PVDisplayMode
     var warnBatteryLowEnabled: Bool
@@ -574,6 +575,18 @@ final class AppSettings {
         set { defaults.set(newValue.rawValue, forKey: "dashboardPVDisplay") }
     }
 
+    /// Abgedocktes Dashboard-Fenster; folgt dem Menü-Dashboard, bis explizit gesetzt.
+    var detachedDashboardPVDisplay: PVDisplayMode {
+        get {
+            if let raw = defaults.string(forKey: "detachedDashboardPVDisplay"),
+               let mode = PVDisplayMode(rawValue: raw) {
+                return mode
+            }
+            return dashboardPVDisplay
+        }
+        set { defaults.set(newValue.rawValue, forKey: "detachedDashboardPVDisplay") }
+    }
+
     var menuBarPVDisplay: PVDisplayMode {
         get { pvDisplayMode(forKey: "menuBarPVDisplay", legacyBoolKey: "menuBarPerPVWatts") }
         set { defaults.set(newValue.rawValue, forKey: "menuBarPVDisplay") }
@@ -725,6 +738,7 @@ final class AppSettings {
             graphWindowLevel: graphWindowLevel,
             updateCheckEnabled: updateCheckEnabled,
             dashboardPVDisplay: dashboardPVDisplay,
+            detachedDashboardPVDisplay: detachedDashboardPVDisplay,
             menuBarPVDisplay: menuBarPVDisplay,
             detachedPVDisplay: detachedPVDisplay,
             warnBatteryLowEnabled: warnBatteryLowEnabled,
@@ -777,6 +791,7 @@ final class AppSettings {
         graphWindowLevel = snapshot.graphWindowLevel
         updateCheckEnabled = snapshot.updateCheckEnabled
         dashboardPVDisplay = snapshot.dashboardPVDisplay
+        detachedDashboardPVDisplay = snapshot.detachedDashboardPVDisplay
         menuBarPVDisplay = snapshot.menuBarPVDisplay
         detachedPVDisplay = snapshot.detachedPVDisplay
         warnBatteryLowEnabled = snapshot.warnBatteryLowEnabled
