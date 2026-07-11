@@ -60,6 +60,15 @@ struct RenderTests {
                 onOpenLarge: {}
             )
             try render(view, appearance: appearance, name: "dashboard-\(suffix)")
+
+            let windowStyle = SolixMenuDashboardView(
+                snapshot: snapshot,
+                style: .window,
+                graphProvider: { self.demoSamples() },
+                onRangeChange: {},
+                onOpenLarge: {}
+            )
+            try render(windowStyle, appearance: appearance, name: "dashboard-window-\(suffix)")
         }
     }
 

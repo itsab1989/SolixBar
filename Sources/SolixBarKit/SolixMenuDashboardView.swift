@@ -43,6 +43,14 @@ final class SolixMenuDashboardView: NSView {
             layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
         }
         buildView()
+        // Hoehe aus den Constraints ableiten: eine geratene Festhoehe brach
+        // das Layout im Menue-Kontext, sobald der Platzbedarf sich aenderte
+        // (das abgedockte Fenster hatte Luft, das Dropdown nicht).
+        layoutSubtreeIfNeeded()
+        let fitted = fittingSize.height
+        if fitted > 200 {
+            setFrameSize(NSSize(width: frame.width, height: fitted))
+        }
         startUpdatedTimer()
     }
 

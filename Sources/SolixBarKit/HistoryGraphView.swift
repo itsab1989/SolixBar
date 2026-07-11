@@ -223,24 +223,41 @@ final class HistoryGraphView: NSView {
 
     private func drawTimeLabels(in rect: NSRect) {
         let domain = timeDomain()
-        for tick in timeTicks(for: domain) {
-            let progress = domain.end.timeIntervalSince(domain.start) > 0
-                ? tick.date.timeIntervalSince(domain.start) / domain.end.timeIntervalSince(domain.start)
+        let font = NSFont.systemFont(ofSize: 10, weight: .medium)
+        let ticks = timeTicks(for: domain)
+        let span = domain.end.timeIntervalSince(domain.start)
+
+        // Pixelposition des "Jetzt"-Labels vorab bestimmen: reguläre Labels,
+        // die damit kollidieren würden, werden ausgelassen (Zeit-Puffer allein
+        // reicht nicht, weil das Jetzt-Label am Rand nach links geclampt wird).
+        var nowLabelMinX = CGFloat.greatestFiniteMagnitude
+        if let last = ticks.last(where: { $0.isLast }) {
+            let text = last.label ?? timeLabel(for: last.date, isLast: true)
+            let width = (text as NSString).size(withAttributes: [.font: font]).width
+            let progress = span > 0 ? last.date.timeIntervalSince(domain.start) / span : 1
+            let x = rect.minX + rect.width * CGFloat(progress)
+            nowLabelMinX = min(rect.maxX - width, max(rect.minX, x - width / 2))
+        }
+
+        for tick in ticks {
+            let progress = span > 0
+                ? tick.date.timeIntervalSince(domain.start) / span
                 : 0
-            let date = domain.start.addingTimeInterval(domain.end.timeIntervalSince(domain.start) * progress)
-            let text = tick.label ?? timeLabel(for: date, isLast: tick.isLast)
-            let font = NSFont.systemFont(ofSize: 10, weight: .medium)
+            let text = tick.label ?? timeLabel(for: tick.date, isLast: tick.isLast)
             let width = (text as NSString).size(withAttributes: [.font: font]).width
             let x = rect.minX + rect.width * CGFloat(progress)
             let clampedX = min(rect.maxX - width, max(rect.minX, x - width / 2))
+            if !tick.isLast && clampedX + width > nowLabelMinX - 8 {
+                continue
+            }
             drawText(text, at: NSPoint(x: clampedX, y: max(13, rect.minY - 28)), font: font, color: .secondaryLabelColor)
 
-            let tick = NSBezierPath()
-            tick.move(to: NSPoint(x: x, y: rect.minY))
-            tick.line(to: NSPoint(x: x, y: rect.minY - 4))
+            let mark = NSBezierPath()
+            mark.move(to: NSPoint(x: x, y: rect.minY))
+            mark.line(to: NSPoint(x: x, y: rect.minY - 4))
             axisColor.setStroke()
-            tick.lineWidth = 1
-            tick.stroke()
+            mark.lineWidth = 1
+            mark.stroke()
         }
     }
 
