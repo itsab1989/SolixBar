@@ -30,6 +30,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let customRangeUnitPopup = NSPopUpButton()
     private let autostartButton = NSButton(checkboxWithTitle: "Beim Login automatisch starten", target: nil, action: nil)
     private let autostartStatus = NSTextField(labelWithString: "")
+    private let updateCheckButton = NSButton(checkboxWithTitle: "Automatisch nach Updates suchen", target: nil, action: nil)
     private let showIconButton = NSButton(checkboxWithTitle: "App-Symbol in der Menüleiste anzeigen", target: nil, action: nil)
     private let stackedButton = NSButton(checkboxWithTitle: "Zweizeilige Kompaktanzeige", target: nil, action: nil)
     private let stackedDetachedButton = NSButton(checkboxWithTitle: "Abgedockte Leiste: Kompaktanzeige", target: nil, action: nil)
@@ -135,7 +136,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, graphLevelPopup, updateCheckButton, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -245,6 +246,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showFlowColorsButton.title = LocalizedText.text("Farbige Werte anzeigen", "Show colored values")
         lockDetachedMenuBarButton.title = LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar")
         autostartButton.title = LocalizedText.text("Beim Login automatisch starten", "Start automatically at login")
+        updateCheckButton.title = LocalizedText.text("Automatisch nach Updates suchen", "Check for updates automatically")
+        updateCheckButton.toolTip = LocalizedText.text(
+            "Fragt einmal täglich die GitHub-Releases ab. Bei einer neueren Version erscheint eine Mitteilung und ein Eintrag im Menü — installiert wird nichts automatisch.",
+            "Checks the GitHub releases once a day. A newer version shows a notification and a menu entry — nothing is installed automatically."
+        )
         for popup in [detachedLevelPopup, dashboardLevelPopup, graphLevelPopup] {
             let index = popup.indexOfSelectedItem
             popup.removeAllItems()
@@ -533,13 +539,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         graphLevelRow.alignment = .centerY
         let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
         let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
+        let updateCheckRow = settingRow(updateCheckButton, help: updateCheckButton.toolTip ?? "")
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
             "Änderungen wirken sofort als Vorschau. Erst Speichern macht sie dauerhaft.",
             "Changes apply immediately as a preview. Press Save to keep them."
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, dashboardLevelRow, graphLevelRow, startTitle, autostartRow, autostartStatus, hint] {
+        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, dashboardLevelRow, graphLevelRow, startTitle, autostartRow, autostartStatus, updateCheckRow, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -579,7 +586,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             autostartStatus.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             autostartStatus.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
 
-            hint.topAnchor.constraint(equalTo: autostartStatus.bottomAnchor, constant: 18),
+            updateCheckRow.topAnchor.constraint(equalTo: autostartStatus.bottomAnchor, constant: 12),
+            updateCheckRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            hint.topAnchor.constraint(equalTo: updateCheckRow.bottomAnchor, constant: 18),
             hint.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             hint.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24)
         ])
@@ -869,6 +879,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         for metric in BarMetric.allCases {
             detachedMetricButtons[metric]?.state = detachedSelected.contains(metric) ? .on : .off
         }
+        updateCheckButton.state = settings.updateCheckEnabled ? .on : .off
         refreshAutostartState()
         updateDataSourceFieldVisibility()
         updateMenuBarPreview()
@@ -922,6 +933,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.detachedBarLevel = levelModes[max(0, min(levelModes.count - 1, detachedLevelPopup.indexOfSelectedItem))]
         settings.dashboardWindowLevel = levelModes[max(0, min(levelModes.count - 1, dashboardLevelPopup.indexOfSelectedItem))]
         settings.graphWindowLevel = levelModes[max(0, min(levelModes.count - 1, graphLevelPopup.indexOfSelectedItem))]
+        settings.updateCheckEnabled = updateCheckButton.state == .on
         settings.detachedShowIcon = detachedIconButton.state == .on
         settings.detachedShowLabels = detachedLabelsButton.state == .on
         settings.detachedShowSymbols = detachedSymbolsButton.state == .on

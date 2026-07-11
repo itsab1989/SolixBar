@@ -214,6 +214,7 @@ struct AppSettingsSnapshot: Equatable {
     var detachedBarLevel: WindowLevelMode
     var dashboardWindowLevel: WindowLevelMode
     var graphWindowLevel: WindowLevelMode
+    var updateCheckEnabled: Bool
 }
 
 @MainActor
@@ -498,6 +499,19 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "isLargeGraphActive") }
     }
 
+    var updateCheckEnabled: Bool {
+        get { followBool("updateCheckEnabled", fallback: true) }
+        set { defaults.set(newValue, forKey: "updateCheckEnabled") }
+    }
+
+    /// Zuletzt gemeldete Update-Version — Zustand, keine Einstellung: bewusst
+    /// nicht im Snapshot, damit "Abbrechen" im Einstellungsfenster keine
+    /// bereits gezeigte Benachrichtigung wieder scharf schaltet.
+    var lastNotifiedUpdateVersion: String? {
+        get { defaults.string(forKey: "lastNotifiedUpdateVersion") }
+        set { defaults.set(newValue, forKey: "lastNotifiedUpdateVersion") }
+    }
+
     func snapshot() -> AppSettingsSnapshot {
         AppSettingsSnapshot(
             dataSourceMode: dataSourceMode,
@@ -532,7 +546,8 @@ final class AppSettings {
             detachedMenuBarFrame: detachedMenuBarFrame,
             detachedBarLevel: detachedBarLevel,
             dashboardWindowLevel: dashboardWindowLevel,
-            graphWindowLevel: graphWindowLevel
+            graphWindowLevel: graphWindowLevel,
+            updateCheckEnabled: updateCheckEnabled
         )
     }
 
@@ -570,5 +585,6 @@ final class AppSettings {
         detachedBarLevel = snapshot.detachedBarLevel
         dashboardWindowLevel = snapshot.dashboardWindowLevel
         graphWindowLevel = snapshot.graphWindowLevel
+        updateCheckEnabled = snapshot.updateCheckEnabled
     }
 }

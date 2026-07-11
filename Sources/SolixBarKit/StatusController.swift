@@ -23,6 +23,8 @@ final class StatusController: NSObject {
     private var refreshAnimationTimer: Timer?
     private var refreshAnimationFrame = 0
     private let refreshFrames = ["↻", "↺"]
+    private var updateCheckTimer: Timer?
+    private var availableUpdate: ReleaseInfo?
 
     func start() {
         settings.migrateMenuBarGridMetricIfNeeded()
@@ -52,6 +54,53 @@ final class StatusController: NSObject {
             }
         }
         scheduleRefreshTimer()
+        scheduleUpdateChecks()
+    }
+
+    /// Update-Check: einmal kurz nach dem Start, danach täglich. Fehler sind
+    /// still (offline/Rate-Limit) — es gibt schlicht keinen Hinweis.
+    private func scheduleUpdateChecks() {
+        updateCheckTimer?.invalidate()
+        updateCheckTimer = nil
+        guard settings.updateCheckEnabled else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+            self?.checkForUpdates()
+        }
+        let timer = Timer(timeInterval: 24 * 60 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkForUpdates()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        updateCheckTimer = timer
+    }
+
+    private func checkForUpdates() {
+        guard settings.updateCheckEnabled else { return }
+        Task { [weak self] in
+            guard let release = try? await UpdateChecker.fetchLatestRelease() else { return }
+            guard let self else { return }
+            guard UpdateChecker.isNewer(release.version, than: AppVersion.short) else { return }
+            AppLogger.info("Update available: \(release.version) (running \(AppVersion.short)).")
+            self.availableUpdate = release
+            self.rebuildMenu()
+            if self.settings.lastNotifiedUpdateVersion != release.version {
+                self.settings.lastNotifiedUpdateVersion = release.version
+                NotificationManager.shared.post(
+                    id: "solixbar.update.\(release.version)",
+                    title: LocalizedText.text("SolixBar-Update verfügbar", "SolixBar update available"),
+                    body: LocalizedText.text(
+                        "Version \(release.version) steht auf GitHub bereit.",
+                        "Version \(release.version) is available on GitHub."
+                    ),
+                    url: release.url
+                )
+            }
+        }
+    }
+
+    @objc private func openUpdatePage() {
+        NSWorkspace.shared.open(availableUpdate?.url ?? UpdateChecker.releasesPageURL)
     }
 
     func prepareForTermination() {
@@ -331,6 +380,15 @@ final class StatusController: NSObject {
         if let lastError {
             menu.addItem(NSMenuItem.separator())
             menu.addItem(value(LocalizedText.text("Fehler", "Error"), lastError, symbol: "exclamationmark.triangle.fill", color: .systemRed))
+        }
+
+        if let update = availableUpdate {
+            menu.addItem(NSMenuItem.separator())
+            menu.addItem(action(
+                LocalizedText.text("Update verfügbar (\(update.version))", "Update available (\(update.version))"),
+                #selector(openUpdatePage),
+                "arrow.down.circle.fill"
+            ))
         }
 
         menu.addItem(NSMenuItem.separator())
@@ -734,6 +792,7 @@ final class StatusController: NSObject {
             displayLevel = .full
         }
         scheduleRefreshTimer()
+        scheduleUpdateChecks()
         applyAppearance()
         updateMenuBarIcon()
         clearStaleSnapshotIfNeeded()

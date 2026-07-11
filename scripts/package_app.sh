@@ -24,6 +24,9 @@ cp "$ROOT/scripts/solix_snapshot.py" "$RESOURCES/solix_snapshot.py"
 chmod +x "$RESOURCES/run_solix_snapshot.sh"
 chmod +x "$MACOS/SolixBar"
 printf "APPL????" > "$CONTENTS/PkgInfo"
+# Ad-hoc-Signatur wie in der CI: ohne Signatur zeigt macOS keine
+# Benachrichtigungen (UNUserNotificationCenter) an.
+codesign --force --deep -s - "$APP"
 touch "$APP"
 
 echo "$APP"
