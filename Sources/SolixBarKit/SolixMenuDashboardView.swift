@@ -36,8 +36,12 @@ final class SolixMenuDashboardView: NSView {
         layer?.backgroundColor = backgroundColor.cgColor
         layer?.cornerRadius = Theme.radiusPanel
         layer?.masksToBounds = true
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
+        // Im eigenen Fensterrahmen wirkt eine Konturlinie wie ein dunkler
+        // Rand — dort traegt der Fensterschatten die Abgrenzung.
+        if style == .menu {
+            layer?.borderWidth = 1
+            layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
+        }
         buildView()
         startUpdatedTimer()
     }
@@ -142,7 +146,9 @@ final class SolixMenuDashboardView: NSView {
         super.viewDidChangeEffectiveAppearance()
         effectiveAppearance.performAsCurrentDrawingAppearance { [self] in
             layer?.backgroundColor = backgroundColor.cgColor
-            layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
+            if style == .menu {
+                layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
+            }
             detailsContainer?.layer?.backgroundColor = panelColor.cgColor
             detailsContainer?.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.45).cgColor
         }

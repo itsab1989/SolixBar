@@ -106,8 +106,6 @@ private final class DetachedDashboardPlaceholderView: NSView {
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         layer?.cornerRadius = Theme.radiusPanel
         layer?.masksToBounds = true
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
 
         let label = NSTextField(wrappingLabelWithString: "Noch keine SOLIX-Daten geladen.")
         label.alignment = .center

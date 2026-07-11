@@ -5,15 +5,18 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     private static let desktopAccessoryLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
     private let settings = AppSettings.shared
     private let attributedBarProvider: () -> NSAttributedString?
+    private let stackedImageProvider: () -> NSImage?
     private let onClose: () -> Void
     private var didNotifyClose = false
     private var wantsVisible = false
 
     init(
         attributedBarProvider: @escaping () -> NSAttributedString?,
+        stackedImageProvider: @escaping () -> NSImage? = { nil },
         onClose: @escaping () -> Void
     ) {
         self.attributedBarProvider = attributedBarProvider
+        self.stackedImageProvider = stackedImageProvider
         self.onClose = onClose
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 44),
@@ -57,9 +60,10 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         guard let window else { return }
         window.isMovableByWindowBackground = !settings.lockDetachedMenuBar
         let attributedText = attributedBarProvider()
+        let stackedImage = stackedImageProvider()
         let oldFrame = window.frame
-        let targetSize = targetSize(for: attributedText, screen: window.screen)
-        let view = DetachedMenuBarView(attributedText: attributedText, onClose: { [weak self] in
+        let targetSize = targetSize(for: attributedText, stackedImage: stackedImage, screen: window.screen)
+        let view = DetachedMenuBarView(attributedText: attributedText, stackedImage: stackedImage, onClose: { [weak self] in
             self?.closeFromButton()
         })
         view.frame = NSRect(origin: .zero, size: targetSize)
@@ -114,15 +118,15 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
         guard saved.width > 0, saved.height > 0 else { return false }
         guard let screen = NSScreen.screens.first(where: { $0.visibleFrame.intersects(saved) }) ?? NSScreen.main else { return false }
         var frame = saved
-        frame.size = targetSize(for: attributedBarProvider(), screen: screen)
+        frame.size = targetSize(for: attributedBarProvider(), stackedImage: stackedImageProvider(), screen: screen)
         frame.origin.x = min(screen.visibleFrame.maxX - frame.width - 8, max(screen.visibleFrame.minX + 8, frame.origin.x))
         frame.origin.y = min(screen.visibleFrame.maxY - frame.height - 6, max(screen.visibleFrame.minY + 8, frame.origin.y))
         window.setFrame(frame, display: true)
         return true
     }
 
-    private func targetSize(for attributedText: NSAttributedString?, screen: NSScreen?) -> NSSize {
-        let textWidth = ceil(attributedText?.size().width ?? 152)
+    private func targetSize(for attributedText: NSAttributedString?, stackedImage: NSImage?, screen: NSScreen?) -> NSSize {
+        let textWidth = ceil(stackedImage?.size.width ?? attributedText?.size().width ?? 152)
         let scale = AppSettings.shared.detachedMenuBarScale
         let iconWidth: CGFloat = AppSettings.shared.showMenuBarIcon ? round(34 * scale) : 0
         let closeWidth: CGFloat = AppSettings.shared.lockDetachedMenuBar ? 0 : round(44 * scale)
@@ -214,11 +218,13 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
 
 private final class DetachedMenuBarView: NSView {
     private let attributedText: NSAttributedString?
+    private let stackedImage: NSImage?
     private let onClose: () -> Void
     private let settings = AppSettings.shared
 
-    init(attributedText: NSAttributedString?, onClose: @escaping () -> Void) {
+    init(attributedText: NSAttributedString?, stackedImage: NSImage?, onClose: @escaping () -> Void) {
         self.attributedText = attributedText
+        self.stackedImage = stackedImage
         self.onClose = onClose
         super.init(frame: NSRect(x: 0, y: 0, width: 640, height: 44))
         wantsLayer = true
@@ -276,7 +282,13 @@ private final class DetachedMenuBarView: NSView {
             stack.addArrangedSubview(imageView)
         }
 
-        if let attributedText, attributedText.length > 0 {
+        if let stackedImage {
+            // Kompaktanzeige: identisches zweizeiliges Bild wie in der
+            // Menüleiste — halbiert die Leistenlänge.
+            let imageView = NSImageView(image: stackedImage)
+            imageView.imageScaling = .scaleNone
+            stack.addArrangedSubview(imageView)
+        } else if let attributedText, attributedText.length > 0 {
             let label = NSTextField(labelWithString: "")
             label.attributedStringValue = readableDetachedText(attributedText)
             label.lineBreakMode = .byTruncatingTail
@@ -324,10 +336,13 @@ private final class DetachedMenuBarView: NSView {
                 constant: -round(14 * settings.detachedMenuBarScale)
             ).isActive = true
         } else {
-            let closeButton = NSButton(title: "×", target: self, action: #selector(close))
+            let closeButton = NSButton(title: "", target: self, action: #selector(close))
             closeButton.isBordered = false
-            closeButton.font = .systemFont(ofSize: round(18 * settings.detachedMenuBarScale), weight: .bold)
-            closeButton.contentTintColor = .white
+            closeButton.image = NSImage(
+                systemSymbolName: "xmark.circle.fill",
+                accessibilityDescription: LocalizedText.text("Schließen", "Close")
+            )?.withSymbolConfiguration(.init(pointSize: round(13 * settings.detachedMenuBarScale), weight: .semibold))
+            closeButton.contentTintColor = NSColor.white.withAlphaComponent(0.72)
             closeButton.toolTip = LocalizedText.text(
                 "Abgedockte Leiste schließen.",
                 "Close detached slim bar."

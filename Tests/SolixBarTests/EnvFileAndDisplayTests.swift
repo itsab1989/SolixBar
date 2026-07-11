@@ -37,6 +37,15 @@ struct EnvFileTests {
     @Test("helper command references app-support env file, never a foreign home")
     @MainActor
     func helperCommand() throws {
+        // Dev-Fallback sucht das Script relativ zum Arbeitsverzeichnis —
+        // fürs Testen deterministisch auf die Paketwurzel setzen.
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let previous = FileManager.default.currentDirectoryPath
+        FileManager.default.changeCurrentDirectoryPath(packageRoot.path)
+        defer { FileManager.default.changeCurrentDirectoryPath(previous) }
         let command = try #require(SolixPaths.helperCommand())
         #expect(command.contains("Application Support/SolixBar/solixbar.env"))
         #expect(!command.contains("/Users/holger"))

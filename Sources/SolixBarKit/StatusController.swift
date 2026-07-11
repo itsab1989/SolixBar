@@ -136,6 +136,19 @@ final class StatusController: NSObject {
         refreshAnimationTimer = timer
     }
 
+    private func stackedEntries(for snapshot: SolixSnapshot, options: MenuBarDisplayOptions) -> [StackedMenuBarRenderer.Entry] {
+        visibleBarMetrics(for: snapshot, options: options)
+            .filter { $0 != .flow && $0 != .status }
+            .compactMap { metric -> StackedMenuBarRenderer.Entry? in
+                guard let text = stackedText(for: metric, snapshot: snapshot) else { return nil }
+                return StackedMenuBarRenderer.Entry(
+                    symbolName: symbol(for: metric, snapshot: snapshot),
+                    text: text,
+                    role: roleTag(for: metric, snapshot: snapshot)
+                )
+            }
+    }
+
     /// Kompaktwert für die zweizeilige Anzeige: nur Zahl + Einheit, die
     /// Metrik-Identität trägt das Glyph.
     private func stackedText(for metric: BarMetric, snapshot: SolixSnapshot) -> String? {
@@ -214,16 +227,7 @@ final class StatusController: NSObject {
         let options = settingsDisplayOptions.applying(level)
 
         if settings.menuBarStacked {
-            let entries = visibleBarMetrics(for: snapshot, options: options)
-                .filter { $0 != .flow && $0 != .status }
-                .compactMap { metric -> StackedMenuBarRenderer.Entry? in
-                    guard let text = stackedText(for: metric, snapshot: snapshot) else { return nil }
-                    return StackedMenuBarRenderer.Entry(
-                        symbolName: symbol(for: metric, snapshot: snapshot),
-                        text: text,
-                        role: roleTag(for: metric, snapshot: snapshot)
-                    )
-                }
+            let entries = stackedEntries(for: snapshot, options: options)
             if entries.count >= 2,
                let image = StackedMenuBarRenderer.image(
                    entries: entries,
@@ -857,10 +861,14 @@ final class StatusController: NSObject {
 
     private func imageAttachment(_ image: NSImage, scale: Double, role: ColorRole? = nil) -> NSAttributedString {
         let attachment = NSTextAttachment()
-        let size = round(13 * scale)
-        image.size = NSSize(width: size, height: size)
+        let height = round(13 * scale)
+        // Seitenverhältnis erhalten: breite Symbole (Batterie) nicht ins
+        // Quadrat stauchen.
+        let aspect = image.size.height > 0 ? image.size.width / image.size.height : 1
+        let width = round(height * aspect)
+        image.size = NSSize(width: width, height: height)
         attachment.image = image
-        attachment.bounds = NSRect(x: 0, y: -2, width: size, height: size)
+        attachment.bounds = NSRect(x: 0, y: -2, width: width, height: height)
         let result = NSMutableAttributedString(attributedString: NSAttributedString(attachment: attachment))
         if let role {
             result.addAttribute(.solixRole, value: role.rawValue, range: NSRange(location: 0, length: result.length))
@@ -1050,6 +1058,17 @@ final class StatusController: NSObject {
                         for: snapshot,
                         scale: self.settings.detachedMenuBarScale,
                         options: self.settingsDisplayOptions
+                    )
+                },
+                stackedImageProvider: { [weak self] in
+                    guard let self, self.settings.menuBarStacked,
+                          let snapshot = self.currentSnapshot() else { return nil }
+                    let entries = self.stackedEntries(for: snapshot, options: self.settingsDisplayOptions)
+                    guard entries.count >= 2 else { return nil }
+                    return StackedMenuBarRenderer.image(
+                        entries: entries,
+                        scale: self.settings.detachedMenuBarScale * 1.25,
+                        showWarning: self.lastError != nil
                     )
                 },
                 onClose: { [weak self] in

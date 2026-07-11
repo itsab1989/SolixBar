@@ -22,16 +22,28 @@ enum StackedMenuBarRenderer {
 
         let fontSize = round(9 * scale)
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
-        let glyphSize = round(8 * scale)
+        let glyphHeight = round(8 * scale)
         let entryGap = round(7 * scale)
         let glyphGap = round(2 * scale)
         let height: CGFloat = 22
+
+        // Glyphenbreite folgt dem natürlichen Seitenverhältnis des Symbols —
+        // ein Batteriesymbol (~1,7:1) in ein Quadrat zu zeichnen staucht es.
+        func glyphSize(for symbolName: String) -> NSSize {
+            guard let glyph = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: glyphHeight, weight: .bold)),
+                  glyph.size.height > 0 else {
+                return NSSize(width: glyphHeight, height: glyphHeight)
+            }
+            let aspect = glyph.size.width / glyph.size.height
+            return NSSize(width: round(glyphHeight * aspect), height: glyphHeight)
+        }
 
         func rowWidth(_ row: [Entry]) -> CGFloat {
             var width: CGFloat = 0
             for (index, entry) in row.enumerated() {
                 if index > 0 { width += entryGap }
-                width += glyphSize + glyphGap
+                width += glyphSize(for: entry.symbolName).width + glyphGap
                 width += ceil((entry.text as NSString).size(withAttributes: [.font: font]).width)
             }
             return width
@@ -51,16 +63,17 @@ enum StackedMenuBarRenderer {
                     if index > 0 { x += entryGap }
                     let color = Theme.color(entry.role)
                     if let glyph = NSImage(systemSymbolName: entry.symbolName, accessibilityDescription: nil)?
-                        .withSymbolConfiguration(.init(pointSize: glyphSize, weight: .bold)) {
+                        .withSymbolConfiguration(.init(pointSize: glyphHeight, weight: .bold)) {
                         let tinted = tint(glyph, with: color)
+                        let drawSize = glyphSize(for: entry.symbolName)
                         let glyphRect = NSRect(
                             x: x,
-                            y: rowCenterY - glyphSize / 2,
-                            width: glyphSize,
-                            height: glyphSize
+                            y: rowCenterY - drawSize.height / 2,
+                            width: drawSize.width,
+                            height: drawSize.height
                         )
                         tinted.draw(in: glyphRect, from: .zero, operation: .sourceOver, fraction: 1)
-                        x += glyphSize + glyphGap
+                        x += drawSize.width + glyphGap
                     }
                     let attributes: [NSAttributedString.Key: Any] = [
                         .font: font,

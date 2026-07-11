@@ -125,14 +125,12 @@ final class HistoryGraphView: NSView {
         }
     }
 
+    /// Dezente Toenung der Plotflaeche ohne eigenen Rahmen — die fruehere
+    /// eckige Box kollidierte optisch mit den runden Ecken der Aussenkarte.
     private func drawPlotSurface(in rect: NSRect) {
-        let plot = NSBezierPath(roundedRect: rect.insetBy(dx: -5, dy: -5), xRadius: 10, yRadius: 10)
-        plotSurfaceColor.setFill()
+        let plot = NSBezierPath(roundedRect: rect.insetBy(dx: -6, dy: -6), xRadius: 8, yRadius: 8)
+        plotSurfaceColor.withAlphaComponent(0.4).setFill()
         plot.fill()
-
-        NSColor.separatorColor.withAlphaComponent(0.30).setStroke()
-        plot.lineWidth = 1
-        plot.stroke()
     }
 
     private func drawHeader() {
@@ -203,12 +201,10 @@ final class HistoryGraphView: NSView {
         gridPath.stroke()
     }
 
+    /// Nur die Grundlinie als Achse — der komplette Kasten wirkte wie ein
+    /// zweiter Rahmen im Rahmen.
     private func drawAxes(in rect: NSRect) {
         let path = NSBezierPath()
-        path.move(to: NSPoint(x: rect.minX, y: rect.minY))
-        path.line(to: NSPoint(x: rect.minX, y: rect.maxY))
-        path.move(to: NSPoint(x: rect.maxX, y: rect.minY))
-        path.line(to: NSPoint(x: rect.maxX, y: rect.maxY))
         path.move(to: NSPoint(x: rect.minX, y: rect.minY))
         path.line(to: NSPoint(x: rect.maxX, y: rect.minY))
         axisColor.setStroke()
