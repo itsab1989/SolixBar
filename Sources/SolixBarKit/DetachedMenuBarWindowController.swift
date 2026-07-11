@@ -311,15 +311,6 @@ private final class DetachedMenuBarView: NSView {
         accent.translatesAutoresizingMaskIntoConstraints = false
         addSubview(accent)
 
-        let border = NSView()
-        border.wantsLayer = true
-        border.layer?.cornerRadius = 16
-        border.layer?.borderWidth = 1
-        border.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.62).cgColor
-        border.layer?.backgroundColor = NSColor.clear.cgColor
-        border.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(border)
-
         let stack = NSStackView()
         stack.orientation = .horizontal
         stack.alignment = .centerY
@@ -371,11 +362,6 @@ private final class DetachedMenuBarView: NSView {
             accent.trailingAnchor.constraint(equalTo: trailingAnchor),
             accent.topAnchor.constraint(equalTo: topAnchor),
             accent.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            border.leadingAnchor.constraint(equalTo: leadingAnchor),
-            border.trailingAnchor.constraint(equalTo: trailingAnchor),
-            border.topAnchor.constraint(equalTo: topAnchor),
-            border.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: round(14 * settings.detachedMenuBarScale)),
             stack.centerYAnchor.constraint(equalTo: centerYAnchor)
