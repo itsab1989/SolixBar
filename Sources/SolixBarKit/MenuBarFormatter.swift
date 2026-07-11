@@ -31,16 +31,17 @@ final class MenuBarFormatter {
         return parts.isEmpty ? nil : parts.joined(separator: separator())
     }
 
-    /// Einträge für die zweizeilige Kompaktanzeige.
+    /// Einträge für die zweizeilige Kompaktanzeige. Auch Energiefluss und
+    /// Status erscheinen hier — früher wurden beide stillschweigend
+    /// herausgefiltert, ihre Häkchen wirkten in der Kompaktanzeige also nicht.
     func stackedEntries(for snapshot: SolixSnapshot, options: MenuBarDisplayOptions) -> [StackedMenuBarRenderer.Entry] {
         visibleBarMetrics(for: snapshot, options: options)
-            .filter { $0 != .flow && $0 != .status }
             .compactMap { metric -> StackedMenuBarRenderer.Entry? in
-                guard let text = stackedText(for: metric, snapshot: snapshot) else { return nil }
+                guard let text = stackedText(for: metric, snapshot: snapshot, options: options) else { return nil }
                 return StackedMenuBarRenderer.Entry(
                     symbolName: symbol(for: metric, snapshot: snapshot),
                     text: text,
-                    role: roleTag(for: metric, snapshot: snapshot)
+                    role: options.showColors ? roleTag(for: metric, snapshot: snapshot) : .neutral
                 )
             }
     }
@@ -72,8 +73,6 @@ final class MenuBarFormatter {
             Theme.grid(watts: snapshot.gridWatts)
         case .batteryFlow:
             Theme.batteryFlow(watts: snapshot.batteryWatts)
-        case .flow:
-            .batteryCharging
         case .today:
             .yieldToday
         case .total:
@@ -110,23 +109,28 @@ final class MenuBarFormatter {
         let result = NSMutableAttributedString()
         let metrics = visibleBarMetrics(for: snapshot, options: options)
         for (index, metric) in metrics.enumerated() {
-            let role = roleTag(for: metric, snapshot: snapshot)
+            // Ohne Farb-Option keine Rollen-Tags anhängen: die Slim-Bar löst
+            // .solixRole eigenständig in Farben auf und würde sonst doch
+            // wieder kolorieren.
+            let role: ColorRole? = options.showColors ? roleTag(for: metric, snapshot: snapshot) : nil
             if index > 0 {
                 result.append(textAttachment(separator(scale: scale), scale: scale))
             }
-            if metric == .flow {
-                appendFlowField(to: result, snapshot: snapshot, scale: scale, options: options)
-                continue
-            }
             if options.showArrows,
                let flow = energyFlowText(for: metric, snapshot: snapshot) {
-                result.append(textAttachment(flow.text, color: Theme.color(flow.role), weight: .bold, scale: scale, role: flow.role))
+                result.append(textAttachment(
+                    flow.text,
+                    color: options.showColors ? Theme.color(flow.role) : .labelColor,
+                    weight: .bold,
+                    scale: scale,
+                    role: options.showColors ? flow.role : nil
+                ))
                 result.append(textAttachment(" ", scale: scale))
             }
             if options.showSymbols,
                 let image = coloredSymbol(
                     symbol(for: metric, snapshot: snapshot),
-                    color: (metric == .battery || options.showArrows)
+                    color: options.showColors
                         ? color(for: metric, snapshot: snapshot)
                         : .labelColor,
                     accessibilityDescription: metric.localizedTitle
@@ -148,34 +152,6 @@ final class MenuBarFormatter {
         let metrics = options.metrics.isEmpty ? [BarMetric.battery, .solar, .grid] : options.metrics
         return metrics.filter { metric in
             metric != .total || snapshot.totalKWh != nil
-        }
-    }
-
-    private func appendFlowField(to result: NSMutableAttributedString, snapshot: SolixSnapshot, scale: Double, options: MenuBarDisplayOptions) {
-        if options.showLabels {
-            result.append(textAttachment("\(BarMetric.flow.localizedShortTitle) ", color: .secondaryLabelColor, scale: scale))
-        }
-
-        guard options.showArrows else {
-            result.append(textAttachment(LocalizedText.text("aus", "off"), color: .secondaryLabelColor, scale: scale))
-            return
-        }
-
-        let flows: [BarMetric] = [.solar, .batteryFlow, .grid]
-        var didAppend = false
-        for metric in flows {
-            guard let flow = energyFlowText(for: metric, snapshot: snapshot) else {
-                continue
-            }
-            if didAppend {
-                result.append(textAttachment(" ", scale: scale))
-            }
-            result.append(textAttachment(flow.text, color: Theme.color(flow.role), weight: .bold, scale: scale, role: flow.role))
-            didAppend = true
-        }
-
-        if !didAppend {
-            result.append(textAttachment("-", color: .secondaryLabelColor, scale: scale))
         }
     }
 
@@ -223,8 +199,6 @@ final class MenuBarFormatter {
             formatBarMetric(metric, value: formatFlowWatts(snapshot.gridWatts, options: options) ?? "--W", options: options)
         case .batteryFlow:
             formatBarMetric(metric, value: formatFlowWatts(snapshot.batteryWatts, options: options) ?? "--W", options: options)
-        case .flow:
-            options.showLabels ? "\(metric.localizedShortTitle)" : "Flow"
         case .today:
             formatBarMetric(metric, value: snapshot.todayKWh.map { String(format: "%.2fkWh", $0) } ?? "--kWh", options: options)
         case .total:
@@ -239,25 +213,36 @@ final class MenuBarFormatter {
     }
 
     /// Kompaktwert für die zweizeilige Anzeige: nur Zahl + Einheit, die
-    /// Metrik-Identität trägt das Glyph.
-    private func stackedText(for metric: BarMetric, snapshot: SolixSnapshot) -> String? {
+    /// Metrik-Identität trägt das Glyph. Mit Pfeil-Option zeigt der Wert
+    /// zusätzlich seine Flussrichtung — dieselbe Semantik wie einzeilig
+    /// (Solar ↓ erzeugt, Akku ↓ lädt / ↑ entlädt, Netz ← Bezug / → Einspeisen).
+    private func stackedText(for metric: BarMetric, snapshot: SolixSnapshot, options: MenuBarDisplayOptions) -> String? {
         switch metric {
         case .battery:
             return snapshot.batteryPercent.map { "\($0)%" } ?? "--%"
         case .solar:
-            return snapshot.solarWatts.map { "\($0)W" } ?? "--W"
+            guard let watts = snapshot.solarWatts else { return "--W" }
+            return options.showArrows && watts > 0 ? "↓\(watts)W" : "\(watts)W"
         case .home:
             return snapshot.homeWatts.map { "\($0)W" } ?? "--W"
         case .grid:
-            return snapshot.gridWatts.map { "\($0)W" } ?? "--W"
+            guard let watts = snapshot.gridWatts else { return "--W" }
+            if options.showArrows, watts != 0 {
+                return watts > 0 ? "←\(watts)W" : "→\(abs(watts))W"
+            }
+            return "\(watts)W"
         case .batteryFlow:
-            return snapshot.batteryWatts.map { "\($0 > 0 ? "+" : "")\($0)W" } ?? "--W"
+            guard let watts = snapshot.batteryWatts else { return "--W" }
+            if options.showArrows, watts != 0 {
+                return watts > 0 ? "↓\(watts)W" : "↑\(abs(watts))W"
+            }
+            return "\(watts > 0 ? "+" : "")\(watts)W"
         case .today:
             return snapshot.todayKWh.map { String(format: "%.1fk", $0) }
         case .total:
             return snapshot.totalKWh.map { String(format: "%.0fk", $0) }
-        case .flow, .status:
-            return nil
+        case .status:
+            return snapshot.status ?? "-"
         }
     }
 
@@ -286,11 +271,11 @@ final class MenuBarFormatter {
     }
 
     private func valueColor(for metric: BarMetric, snapshot: SolixSnapshot, options: MenuBarDisplayOptions) -> NSColor {
+        guard options.showColors else { return .labelColor }
         if metric == .battery {
             guard snapshot.batteryPercent != nil else { return .secondaryLabelColor }
             return Theme.color(Theme.battery(percent: snapshot.batteryPercent))
         }
-        guard options.showArrows else { return .labelColor }
         switch metric {
         case .solar:
             return snapshot.solarWatts == nil ? .secondaryLabelColor : Theme.color(.solar)

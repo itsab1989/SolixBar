@@ -40,7 +40,7 @@ final class DetachedDashboardWindowController: NSWindowController {
         window.minSize = NSSize(width: 430, height: 580)
         window.contentMinSize = NSSize(width: 430, height: 580)
         window.maxSize = NSSize(width: 760, height: 980)
-        window.level = .floating
+        window.level = AppSettings.shared.dashboardWindowLevel.nsWindowLevel
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.setFrameAutosaveName("SolixBarDetachedDashboard")
         super.init(window: window)
@@ -62,6 +62,7 @@ final class DetachedDashboardWindowController: NSWindowController {
 
     func rebuild() {
         guard let window else { return }
+        window.level = AppSettings.shared.dashboardWindowLevel.nsWindowLevel
         let oldFrame = window.frame
         let contentSize = window.contentView?.bounds.size ?? window.contentLayoutRect.size
         let view: NSView

@@ -23,7 +23,6 @@ enum BarMetric: String, CaseIterable {
     case home
     case grid
     case batteryFlow
-    case flow
     case today
     case total
     case status
@@ -40,8 +39,6 @@ enum BarMetric: String, CaseIterable {
             "Netzbezug"
         case .batteryFlow:
             "Akku-Fluss"
-        case .flow:
-            "Energiefluss"
         case .today:
             "Heutiger Ertrag"
         case .total:
@@ -63,8 +60,6 @@ enum BarMetric: String, CaseIterable {
             "Netz"
         case .batteryFlow:
             "Fluss"
-        case .flow:
-            "Flow"
         case .today:
             "Ertrag"
         case .total:
@@ -86,8 +81,6 @@ enum BarMetric: String, CaseIterable {
             "powerplug.fill"
         case .batteryFlow:
             "bolt.fill"
-        case .flow:
-            "arrow.up.arrow.down.circle.fill"
         case .today:
             "chart.bar.fill"
         case .total:
@@ -151,6 +144,25 @@ enum HistoryRange: String, CaseIterable {
     }
 }
 
+/// Fensterebene der frei platzierbaren Fenster (Slim-Bar, abgedocktes
+/// Dashboard): immer vorn, normal im Fensterstapel oder immer hinten.
+enum WindowLevelMode: String, CaseIterable {
+    case alwaysOnTop
+    case normal
+    case alwaysBehind
+
+    @MainActor var title: String {
+        switch self {
+        case .alwaysOnTop:
+            return LocalizedText.text("Immer im Vordergrund", "Always on top")
+        case .normal:
+            return LocalizedText.text("Normal (wie andere Fenster)", "Normal (like other windows)")
+        case .alwaysBehind:
+            return LocalizedText.text("Immer im Hintergrund", "Always behind")
+        }
+    }
+}
+
 enum GraphMetric: String, CaseIterable {
     case battery
     case solar
@@ -185,6 +197,8 @@ struct AppSettingsSnapshot: Equatable {
     var showMetricLabels: Bool
     var showMenuBarMetricSymbols: Bool
     var showEnergyFlowArrows: Bool
+    var showFlowColors: Bool
+    var detachedShowFlowColors: Bool
     var menuBarScale: Double
     var detachedMenuBarScale: Double
     var lockDetachedMenuBar: Bool
@@ -197,6 +211,8 @@ struct AppSettingsSnapshot: Equatable {
     var graphFitsData: Bool
     var isDetachedMenuBarActive: Bool
     var detachedMenuBarFrame: String
+    var detachedBarLevel: WindowLevelMode
+    var dashboardWindowLevel: WindowLevelMode
 }
 
 @MainActor
@@ -292,6 +308,23 @@ final class AppSettings {
         defaults.set(true, forKey: key)
     }
 
+    /// Der Sammelwert "Energiefluss" zeigte dieselben Pfeile und Begriffe wie
+    /// die Option "Farben und Flussrichtung" ein zweites Mal — er entfällt.
+    /// Wer ihn aktiv hatte, behält die Information über die Pfeil-Option.
+    func migrateFlowMetricIfNeeded() {
+        let key = "didMigrateFlowMetric040"
+        guard defaults.bool(forKey: key) == false else { return }
+        defaults.set(true, forKey: key)
+        if let stored = defaults.array(forKey: "barMetrics") as? [String], stored.contains("flow") {
+            defaults.set(stored.filter { $0 != "flow" }, forKey: "barMetrics")
+            showEnergyFlowArrows = true
+        }
+        if let stored = defaults.array(forKey: "detachedBarMetrics") as? [String], stored.contains("flow") {
+            defaults.set(stored.filter { $0 != "flow" }, forKey: "detachedBarMetrics")
+            detachedShowArrows = true
+        }
+    }
+
     /// Kompaktanzeige ist Standard: informationsdicht und notch-sicher.
     var menuBarStacked: Bool {
         get {
@@ -336,6 +369,19 @@ final class AppSettings {
             return defaults.bool(forKey: "showEnergyFlowArrows")
         }
         set { defaults.set(newValue, forKey: "showEnergyFlowArrows") }
+    }
+
+    /// Rollenfarben getrennt von der Flussrichtung — die frühere Option
+    /// schaltete beides gemeinsam. Standard an: entspricht der farbigen
+    /// Kompaktanzeige.
+    var showFlowColors: Bool {
+        get { followBool("showFlowColors", fallback: true) }
+        set { defaults.set(newValue, forKey: "showFlowColors") }
+    }
+
+    var detachedShowFlowColors: Bool {
+        get { followBool("detachedShowFlowColors", fallback: showFlowColors) }
+        set { defaults.set(newValue, forKey: "detachedShowFlowColors") }
     }
 
     var menuBarScale: Double {
@@ -427,6 +473,18 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: "detachedMenuBarFrame") }
     }
 
+    /// Standardwerte entsprechen dem bisherigen festen Verhalten:
+    /// Slim-Bar hinten (Schreibtisch-Ebene), Dashboard immer vorn.
+    var detachedBarLevel: WindowLevelMode {
+        get { WindowLevelMode(rawValue: defaults.string(forKey: "detachedBarLevel") ?? "") ?? .alwaysBehind }
+        set { defaults.set(newValue.rawValue, forKey: "detachedBarLevel") }
+    }
+
+    var dashboardWindowLevel: WindowLevelMode {
+        get { WindowLevelMode(rawValue: defaults.string(forKey: "dashboardWindowLevel") ?? "") ?? .alwaysOnTop }
+        set { defaults.set(newValue.rawValue, forKey: "dashboardWindowLevel") }
+    }
+
     func snapshot() -> AppSettingsSnapshot {
         AppSettingsSnapshot(
             dataSourceMode: dataSourceMode,
@@ -445,6 +503,8 @@ final class AppSettings {
             showMetricLabels: showMetricLabels,
             showMenuBarMetricSymbols: showMenuBarMetricSymbols,
             showEnergyFlowArrows: showEnergyFlowArrows,
+            showFlowColors: showFlowColors,
+            detachedShowFlowColors: detachedShowFlowColors,
             menuBarScale: menuBarScale,
             detachedMenuBarScale: detachedMenuBarScale,
             lockDetachedMenuBar: lockDetachedMenuBar,
@@ -456,7 +516,9 @@ final class AppSettings {
             graphMetrics: graphMetrics,
             graphFitsData: graphFitsData,
             isDetachedMenuBarActive: isDetachedMenuBarActive,
-            detachedMenuBarFrame: detachedMenuBarFrame
+            detachedMenuBarFrame: detachedMenuBarFrame,
+            detachedBarLevel: detachedBarLevel,
+            dashboardWindowLevel: dashboardWindowLevel
         )
     }
 
@@ -477,6 +539,8 @@ final class AppSettings {
         showMetricLabels = snapshot.showMetricLabels
         showMenuBarMetricSymbols = snapshot.showMenuBarMetricSymbols
         showEnergyFlowArrows = snapshot.showEnergyFlowArrows
+        showFlowColors = snapshot.showFlowColors
+        detachedShowFlowColors = snapshot.detachedShowFlowColors
         menuBarScale = snapshot.menuBarScale
         detachedMenuBarScale = snapshot.detachedMenuBarScale
         lockDetachedMenuBar = snapshot.lockDetachedMenuBar
@@ -489,5 +553,7 @@ final class AppSettings {
         graphFitsData = snapshot.graphFitsData
         isDetachedMenuBarActive = snapshot.isDetachedMenuBarActive
         detachedMenuBarFrame = snapshot.detachedMenuBarFrame
+        detachedBarLevel = snapshot.detachedBarLevel
+        dashboardWindowLevel = snapshot.dashboardWindowLevel
     }
 }

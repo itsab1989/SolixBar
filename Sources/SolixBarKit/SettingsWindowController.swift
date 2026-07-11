@@ -39,7 +39,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let detachedArrowsButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let showLabelsButton = NSButton(checkboxWithTitle: "Werte mit Bezeichnung anzeigen", target: nil, action: nil)
     private let showMetricSymbolsButton = NSButton(checkboxWithTitle: "Symbole vor den Werten anzeigen", target: nil, action: nil)
-    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Farbige Pfeile beim Energiefluss anzeigen", target: nil, action: nil)
+    private let showEnergyFlowArrowsButton = NSButton(checkboxWithTitle: "Flussrichtung anzeigen", target: nil, action: nil)
+    private let showFlowColorsButton = NSButton(checkboxWithTitle: "Farbige Werte anzeigen", target: nil, action: nil)
+    private let detachedFlowColorsButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let lockDetachedMenuBarButton = NSButton(checkboxWithTitle: "Abgedockte Leiste fixieren", target: nil, action: nil)
     private let scaleSlider = NSSlider(value: 1.0, minValue: 0.75, maxValue: 1.6, target: nil, action: nil)
     private let scaleValue = NSTextField(labelWithString: "100 %")
@@ -47,6 +49,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let detachedScaleValue = NSTextField(labelWithString: "100 %")
     private let appearancePopup = NSPopUpButton()
     private let languagePopup = NSPopUpButton()
+    private let detachedLevelPopup = NSPopUpButton()
+    private let dashboardLevelPopup = NSPopUpButton()
     private var metricButtons: [BarMetric: NSButton] = [:]
     private var detachedMetricButtons: [BarMetric: NSButton] = [:]
     private var originalSettings: AppSettingsSnapshot?
@@ -130,7 +134,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             textField.delegate = self
         }
 
-        for control in [modePopup, appearancePopup, languagePopup, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
+        for control in [modePopup, appearancePopup, languagePopup, detachedLevelPopup, dashboardLevelPopup, showIconButton, stackedButton, stackedDetachedButton, detachedIconButton, detachedLabelsButton, detachedSymbolsButton, detachedArrowsButton, detachedFlowColorsButton, graphFitButton, showLabelsButton, showMetricSymbolsButton, showEnergyFlowArrowsButton, showFlowColorsButton, lockDetachedMenuBarButton, scaleSlider, detachedScaleSlider] {
             control.target = self
             control.action = #selector(applyPreview)
         }
@@ -145,7 +149,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         graphFitButton.toolTip = "Blendet leere Zeiträume im Verlaufsgraphen aus: Die Zeitachse beginnt bei der ersten vorhandenen Messung statt beim Kalenderanfang des Zeitraums."
         showLabelsButton.toolTip = "Zeigt kurze Namen wie Akku oder Solar vor den Zahlen."
         showMetricSymbolsButton.toolTip = "Zeigt farbige Symbole direkt vor den Menüleistenwerten."
-        showEnergyFlowArrowsButton.toolTip = "Schaltet kontrastreiche Flussfarben, Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen gemeinsam ein oder aus."
+        showEnergyFlowArrowsButton.toolTip = "Zeigt Richtungspfeile und Begriffe wie Laden, Entladen, Bezug und Einspeisen; Wattwerte erscheinen dann ohne Vorzeichen."
+        showFlowColorsButton.toolTip = "Färbt Werte und Symbole nach ihrer Bedeutung (Akku grün, Solar gelb, Netzbezug rot, Einspeisung violett). Ohne Farben bleibt die Anzeige einfarbig."
         lockDetachedMenuBarButton.toolTip = "Fixiert die abgedockte Leiste, damit sie nicht versehentlich verschoben wird."
         scaleSlider.toolTip = "Vergrößert oder verkleinert Text und Symbole in der Menüleiste."
         scaleValue.toolTip = "Aktuell eingestellte Größe der Menüleistenanzeige."
@@ -228,14 +233,31 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         detachedLabelsButton.toolTip = LocalizedText.text("Zeigt kurze Namen wie Akku oder Solar vor den Zahlen.", "Shows short names like Battery or Solar before the numbers.")
         detachedSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
         detachedSymbolsButton.toolTip = LocalizedText.text("Zeigt farbige Symbole direkt vor den Werten.", "Shows colored symbols right before the values.")
-        detachedArrowsButton.title = LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction")
-        detachedArrowsButton.toolTip = LocalizedText.text("Farbige Flussbegriffe und Richtungspfeile in der Leiste.", "Colored flow terms and direction arrows in the bar.")
+        detachedArrowsButton.title = LocalizedText.text("Flussrichtung anzeigen", "Show flow direction")
+        detachedArrowsButton.toolTip = LocalizedText.text("Richtungspfeile und Begriffe wie Laden oder Bezug in der Leiste; Wattwerte ohne Vorzeichen.", "Direction arrows and terms like charging or import in the bar; watt values without sign.")
+        detachedFlowColorsButton.title = LocalizedText.text("Farbige Werte anzeigen", "Show colored values")
+        detachedFlowColorsButton.toolTip = LocalizedText.text("Färbt Werte und Symbole der Leiste nach ihrer Bedeutung.", "Colors the bar's values and symbols by meaning.")
         graphFitButton.title = LocalizedText.text("Graph an vorhandene Daten anpassen", "Fit graph to available data")
         showLabelsButton.title = LocalizedText.text("Werte mit Bezeichnung anzeigen", "Show labels next to values")
         showMetricSymbolsButton.title = LocalizedText.text("Symbole vor den Werten anzeigen", "Show symbols before values")
-        showEnergyFlowArrowsButton.title = LocalizedText.text("Farben und Flussrichtung anzeigen", "Show colors and flow direction")
+        showEnergyFlowArrowsButton.title = LocalizedText.text("Flussrichtung anzeigen", "Show flow direction")
+        showFlowColorsButton.title = LocalizedText.text("Farbige Werte anzeigen", "Show colored values")
         lockDetachedMenuBarButton.title = LocalizedText.text("Abgedockte Leiste fixieren", "Lock detached slim bar")
         autostartButton.title = LocalizedText.text("Beim Login automatisch starten", "Start automatically at login")
+        for popup in [detachedLevelPopup, dashboardLevelPopup] {
+            let index = popup.indexOfSelectedItem
+            popup.removeAllItems()
+            popup.addItems(withTitles: WindowLevelMode.allCases.map(\.title))
+            if index >= 0 { popup.selectItem(at: index) }
+        }
+        detachedLevelPopup.toolTip = LocalizedText.text(
+            "Legt fest, wo die Leiste im Fensterstapel liegt: über allen Fenstern, normal eingereiht oder auf dem Schreibtisch hinter allen Fenstern.",
+            "Controls where the bar sits in the window stack: above all windows, ordered like a normal window, or on the desktop behind everything."
+        )
+        dashboardLevelPopup.toolTip = LocalizedText.text(
+            "Gilt für das abgedockte Dashboard-Fenster: über allen Fenstern schwebend, normal eingereiht oder hinter allen Fenstern auf dem Schreibtisch.",
+            "Applies to the detached dashboard window: floating above all windows, ordered like a normal window, or on the desktop behind everything."
+        )
     }
 
     private func menuBarPane() -> NSView {
@@ -251,9 +273,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let displayTitle = sectionTitle(LocalizedText.text("Darstellung", "Display"))
         let showIconRow = settingRow(showIconButton, help: showIconButton.toolTip ?? "")
         let stackedRow = settingRow(stackedButton, help: stackedButton.toolTip ?? "")
-        let stackedDetachedRow = settingRow(stackedDetachedButton, help: stackedDetachedButton.toolTip ?? "")
         let showLabelsRow = settingRow(showLabelsButton, help: showLabelsButton.toolTip ?? "")
         let showMetricSymbolsRow = settingRow(showMetricSymbolsButton, help: showMetricSymbolsButton.toolTip ?? "")
+        let showFlowColorsRow = settingRow(showFlowColorsButton, help: showFlowColorsButton.toolTip ?? "")
         let showEnergyFlowArrowsRow = settingRow(showEnergyFlowArrowsButton, help: showEnergyFlowArrowsButton.toolTip ?? "")
         let scaleRow = NSStackView(views: [label(LocalizedText.text("Skalierung", "Scale")), scaleSlider, scaleValue, helpButton(labelTooltip("Skalierung"))])
         scaleRow.orientation = .horizontal
@@ -262,7 +284,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         scaleValue.alignment = .right
         scaleValue.widthAnchor.constraint(equalToConstant: 56).isActive = true
 
-        for view in [previewTitle, menuBarPreview, metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showEnergyFlowArrowsRow, scaleRow] {
+        for view in [previewTitle, menuBarPreview, metricTitle, metricGrid, displayTitle, showIconRow, stackedRow, showLabelsRow, showMetricSymbolsRow, showFlowColorsRow, showEnergyFlowArrowsRow, scaleRow] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -297,7 +319,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             showMetricSymbolsRow.topAnchor.constraint(equalTo: showLabelsRow.bottomAnchor, constant: 8),
             showMetricSymbolsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            showEnergyFlowArrowsRow.topAnchor.constraint(equalTo: showMetricSymbolsRow.bottomAnchor, constant: 8),
+            showFlowColorsRow.topAnchor.constraint(equalTo: showMetricSymbolsRow.bottomAnchor, constant: 8),
+            showFlowColorsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            showEnergyFlowArrowsRow.topAnchor.constraint(equalTo: showFlowColorsRow.bottomAnchor, constant: 8),
             showEnergyFlowArrowsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             scaleRow.topAnchor.constraint(equalTo: showEnergyFlowArrowsRow.bottomAnchor, constant: 16),
@@ -319,8 +344,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let iconRow = settingRow(detachedIconButton, help: detachedIconButton.toolTip ?? "")
         let labelsRow = settingRow(detachedLabelsButton, help: detachedLabelsButton.toolTip ?? "")
         let symbolsRow = settingRow(detachedSymbolsButton, help: detachedSymbolsButton.toolTip ?? "")
+        let colorsRow = settingRow(detachedFlowColorsButton, help: detachedFlowColorsButton.toolTip ?? "")
         let arrowsRow = settingRow(detachedArrowsButton, help: detachedArrowsButton.toolTip ?? "")
         let lockRow = settingRow(lockDetachedMenuBarButton, help: lockDetachedMenuBarButton.toolTip ?? "")
+        let levelRow = NSStackView(views: [
+            label(LocalizedText.text("Fensterebene", "Window level")),
+            detachedLevelPopup,
+            helpButton(detachedLevelPopup.toolTip ?? "")
+        ])
+        levelRow.orientation = .horizontal
+        levelRow.spacing = 12
+        levelRow.alignment = .centerY
         let detachedScaleRow = NSStackView(views: [label(LocalizedText.text("Skalierung", "Scale")), detachedScaleSlider, detachedScaleValue, helpButton(labelTooltip("Abgedockt"))])
         detachedScaleRow.orientation = .horizontal
         detachedScaleRow.spacing = 12
@@ -333,7 +367,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [metricTitle, metricGrid, displayTitle, stackedDetachedRow, iconRow, labelsRow, symbolsRow, arrowsRow, lockRow, detachedScaleRow, hint] {
+        for view in [metricTitle, metricGrid, displayTitle, stackedDetachedRow, iconRow, labelsRow, symbolsRow, colorsRow, arrowsRow, lockRow, levelRow, detachedScaleRow, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -361,13 +395,19 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             symbolsRow.topAnchor.constraint(equalTo: labelsRow.bottomAnchor, constant: 8),
             symbolsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            arrowsRow.topAnchor.constraint(equalTo: symbolsRow.bottomAnchor, constant: 8),
+            colorsRow.topAnchor.constraint(equalTo: symbolsRow.bottomAnchor, constant: 8),
+            colorsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            arrowsRow.topAnchor.constraint(equalTo: colorsRow.bottomAnchor, constant: 8),
             arrowsRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             lockRow.topAnchor.constraint(equalTo: arrowsRow.bottomAnchor, constant: 8),
             lockRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            detachedScaleRow.topAnchor.constraint(equalTo: lockRow.bottomAnchor, constant: 16),
+            levelRow.topAnchor.constraint(equalTo: lockRow.bottomAnchor, constant: 12),
+            levelRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            detachedScaleRow.topAnchor.constraint(equalTo: levelRow.bottomAnchor, constant: 12),
             detachedScaleRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
             detachedScaleRow.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -24),
 
@@ -470,6 +510,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         customRangeRow.orientation = .horizontal
         customRangeRow.spacing = 12
         customRangeRow.alignment = .centerY
+        let dashboardLevelRow = NSStackView(views: [
+            label(LocalizedText.text("Fensterebene", "Window level")),
+            dashboardLevelPopup,
+            helpButton(dashboardLevelPopup.toolTip ?? "")
+        ])
+        dashboardLevelRow.orientation = .horizontal
+        dashboardLevelRow.spacing = 12
+        dashboardLevelRow.alignment = .centerY
         let startTitle = sectionTitle(LocalizedText.text("Startverhalten", "Startup"))
         let autostartRow = settingRow(autostartButton, help: autostartButton.toolTip ?? "")
         let hint = NSTextField(wrappingLabelWithString: LocalizedText.text(
@@ -478,7 +526,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         ))
         hint.textColor = .secondaryLabelColor
 
-        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, startTitle, autostartRow, autostartStatus, hint] {
+        for view in [title, appearanceRow, languageRow, dashboardTitle, graphFitRow, customRangeRow, dashboardLevelRow, startTitle, autostartRow, autostartStatus, hint] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
@@ -502,7 +550,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             customRangeRow.topAnchor.constraint(equalTo: graphFitRow.bottomAnchor, constant: 10),
             customRangeRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
-            startTitle.topAnchor.constraint(equalTo: customRangeRow.bottomAnchor, constant: 24),
+            dashboardLevelRow.topAnchor.constraint(equalTo: customRangeRow.bottomAnchor, constant: 10),
+            dashboardLevelRow.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
+
+            startTitle.topAnchor.constraint(equalTo: dashboardLevelRow.bottomAnchor, constant: 24),
             startTitle.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 24),
 
             autostartRow.topAnchor.constraint(equalTo: startTitle.bottomAnchor, constant: 12),
@@ -554,8 +605,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func buildMetricGrid(for target: MetricGridTarget) -> NSGridView {
         let rows = [
             [BarMetric.battery, .solar, .home],
-            [BarMetric.grid, .batteryFlow, .flow],
-            [BarMetric.today, .total, .status]
+            [BarMetric.grid, .batteryFlow, .today],
+            [BarMetric.total, .status]
         ].map { metrics in
             metrics.map { metric in
                 let button = NSButton(checkboxWithTitle: localizedMetricTitle(metric), target: self, action: #selector(applyPreview))
@@ -658,8 +709,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
                 return "Shows current grid import or export in watts."
             case .batteryFlow:
                 return "Shows whether the battery is charging or discharging."
-            case .flow:
-                return "Shows the energy-flow field in the menu bar. Arrows appear when the arrow option is enabled."
             case .today:
                 return "Shows today's solar yield in kWh."
             case .total:
@@ -679,8 +728,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             return "Zeigt den aktuellen Netzbezug oder die Einspeisung in Watt."
         case .batteryFlow:
             return "Zeigt, ob der Akku gerade lädt oder entlädt."
-        case .flow:
-            return "Zeigt das Energiefluss-Feld in der Menüleiste. Die Pfeile erscheinen, wenn die Pfeil-Option aktiviert ist."
         case .today:
             return "Zeigt den heutigen Solarertrag in kWh."
         case .total:
@@ -703,8 +750,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             return "Grid Import"
         case .batteryFlow:
             return "Battery Flow"
-        case .flow:
-            return "Energy Flow"
         case .today:
             return "Today's Yield"
         case .total:
@@ -782,6 +827,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         )
         let unitIndex = ["hours", "days", "weeks", "months"].firstIndex(of: settings.customHistoryUnit) ?? 1
         customRangeUnitPopup.selectItem(at: unitIndex)
+        detachedLevelPopup.selectItem(at: WindowLevelMode.allCases.firstIndex(of: settings.detachedBarLevel) ?? 0)
+        dashboardLevelPopup.selectItem(at: WindowLevelMode.allCases.firstIndex(of: settings.dashboardWindowLevel) ?? 0)
         detachedIconButton.state = settings.detachedShowIcon ? .on : .off
         detachedLabelsButton.state = settings.detachedShowLabels ? .on : .off
         detachedSymbolsButton.state = settings.detachedShowSymbols ? .on : .off
@@ -789,6 +836,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         showLabelsButton.state = settings.showMetricLabels ? .on : .off
         showMetricSymbolsButton.state = settings.showMenuBarMetricSymbols ? .on : .off
         showEnergyFlowArrowsButton.state = settings.showEnergyFlowArrows ? .on : .off
+        showFlowColorsButton.state = settings.showFlowColors ? .on : .off
+        detachedFlowColorsButton.state = settings.detachedShowFlowColors ? .on : .off
         lockDetachedMenuBarButton.state = settings.lockDetachedMenuBar ? .on : .off
         scaleSlider.doubleValue = settings.menuBarScale
         scaleValue.stringValue = "\(Int(round(scaleSlider.doubleValue * 100))) %"
@@ -852,6 +901,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.customHistoryUnit = selectedUnit
         let value = max(1, customRangeField.integerValue)
         settings.customHistoryDays = min(365, HistoryGraphMenuView.days(fromValue: value, unit: selectedUnit))
+        let levelModes = WindowLevelMode.allCases
+        settings.detachedBarLevel = levelModes[max(0, min(levelModes.count - 1, detachedLevelPopup.indexOfSelectedItem))]
+        settings.dashboardWindowLevel = levelModes[max(0, min(levelModes.count - 1, dashboardLevelPopup.indexOfSelectedItem))]
         settings.detachedShowIcon = detachedIconButton.state == .on
         settings.detachedShowLabels = detachedLabelsButton.state == .on
         settings.detachedShowSymbols = detachedSymbolsButton.state == .on
@@ -859,6 +911,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         settings.showMetricLabels = showLabelsButton.state == .on
         settings.showMenuBarMetricSymbols = showMetricSymbolsButton.state == .on
         settings.showEnergyFlowArrows = showEnergyFlowArrowsButton.state == .on
+        settings.showFlowColors = showFlowColorsButton.state == .on
+        settings.detachedShowFlowColors = detachedFlowColorsButton.state == .on
         settings.lockDetachedMenuBar = lockDetachedMenuBarButton.state == .on
         settings.menuBarScale = scaleSlider.doubleValue
         settings.detachedMenuBarScale = detachedScaleSlider.doubleValue
@@ -935,7 +989,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             metrics: settings.barMetrics,
             showLabels: settings.showMetricLabels,
             showSymbols: settings.showMenuBarMetricSymbols,
-            showArrows: settings.showEnergyFlowArrows
+            showArrows: settings.showEnergyFlowArrows,
+            showColors: settings.showFlowColors
         )
         let stripWidth: CGFloat = 560
         let stripHeight: CGFloat = 28

@@ -48,13 +48,27 @@ struct RenderTests {
         }
     }
 
+    /// Leicht abweichender Vorgänger-Snapshot, damit die Trend-Pfeile der
+    /// Dashboard-Karten im Render sichtbar sind (wie in der echten App ab
+    /// dem zweiten Refresh).
+    private func previousDemoSnapshot(of snapshot: SolixSnapshot) -> SolixSnapshot {
+        var previous = snapshot
+        previous.batteryPercent = snapshot.batteryPercent.map { $0 - 3 }
+        previous.solarWatts = snapshot.solarWatts.map { $0 - 60 }
+        previous.gridWatts = snapshot.gridWatts.map { $0 + 40 }
+        previous.batteryWatts = snapshot.batteryWatts.map { $0 + 25 }
+        return previous
+    }
+
     @Test("dashboard renders in light and dark")
     func dashboard() throws {
         var snapshot = SolixSnapshot.demo
         snapshot.updatedAt = Date().addingTimeInterval(-23)
+        let previous = previousDemoSnapshot(of: snapshot)
         for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             let view = SolixMenuDashboardView(
                 snapshot: snapshot,
+                previous: previous,
                 graphProvider: { self.demoSamples() },
                 onRangeChange: {},
                 onOpenLarge: {}
@@ -63,6 +77,7 @@ struct RenderTests {
 
             let windowStyle = SolixMenuDashboardView(
                 snapshot: snapshot,
+                previous: previous,
                 style: .window,
                 graphProvider: { self.demoSamples() },
                 onRangeChange: {},
@@ -72,37 +87,79 @@ struct RenderTests {
         }
     }
 
-    @Test("large graph renders in light and dark")
+    /// Rendert das echte Verlaufsfenster (inkl. Chip-Kopfzeile) statt nur
+    /// der nackten Graph-View — sonst zeigen die Bilder eine Kopfzeile,
+    /// die es im Fenster gar nicht gibt.
+    @Test("large graph window renders in light and dark")
     func largeGraph() throws {
-        for (suffix, appearance) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
-            let view = HistoryGraphView(
-                samples: demoSamples(),
-                rangeTitle: "24 Stunden",
-                range: .day,
-                rangeDuration: 24 * 60 * 60,
-                visibleMetrics: GraphMetric.allCases,
-                size: NSSize(width: 680, height: 360)
-            )
-            try render(view, appearance: appearance, name: "graph-large-\(suffix)")
+        let savedAppearance = NSApp.appearance
+        defer { NSApp.appearance = savedAppearance }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
+            let appearance = try #require(NSAppearance(named: name))
+            NSApp.appearance = appearance
+            let controller = LargeGraphWindowController(graphProvider: { self.demoSamples() })
+            let window = try #require(controller.window)
+            window.appearance = appearance
+            window.alphaValue = 0
+            controller.showWindow(nil)
+            let content = try #require(window.contentView)
+            content.wantsLayer = true
+            appearance.performAsCurrentDrawingAppearance {
+                content.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+            }
+            RunLoop.main.run(until: Date().addingTimeInterval(0.8))
+            let rep = try #require(content.bitmapImageRepForCachingDisplay(in: content.bounds))
+            content.cacheDisplay(in: content.bounds, to: rep)
+            let png = try #require(rep.representation(using: .png, properties: [:]))
+            try png.write(to: Self.outputDir.appendingPathComponent("graph-large-\(suffix).png"))
+            window.close()
         }
     }
 
+    /// Baut die Leiste pro Appearance neu auf (cgColor-Auflösung!) und legt
+    /// sie über einen Schreibtisch-artigen Verlauf: Offscreen rendert die
+    /// Vibrancy nichts — ohne Hintergrund sah "dunkel" hell aus.
     @Test("detached slim bar renders")
     func detachedBar() throws {
-        let text = NSMutableAttributedString(
-            string: "Akku 82%  PV 642W  Netz -86W",
-            attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium),
-                .foregroundColor: NSColor.labelColor
-            ]
+        let formatter = MenuBarFormatter()
+        var snapshot = SolixSnapshot.demo
+        snapshot.updatedAt = Date()
+        let options = MenuBarDisplayOptions(
+            metrics: [.battery, .solar, .grid],
+            showLabels: true,
+            showSymbols: true,
+            showArrows: false
         )
-        let controller = DetachedMenuBarWindowController(
-            attributedBarProvider: { text },
-            onClose: {}
-        )
-        let view = try #require(controller.window?.contentView)
-        try render(view, appearance: .darkAqua, name: "detached-bar-dark", settle: 0.6)
-        try render(view, appearance: .aqua, name: "detached-bar-light", settle: 0.6)
+        let savedAppearance = NSApp.appearance
+        defer { NSApp.appearance = savedAppearance }
+
+        for (suffix, name) in [("dark", NSAppearance.Name.darkAqua), ("light", .aqua)] {
+            let appearance = try #require(NSAppearance(named: name))
+            NSApp.appearance = appearance
+            let controller = DetachedMenuBarWindowController(
+                attributedBarProvider: { formatter.attributedTitle(for: snapshot, scale: 1.0, options: options) },
+                onClose: {}
+            )
+            let bar = try #require(controller.window?.contentView)
+            bar.autoresizingMask = []
+
+            let canvas = NSView(frame: NSRect(x: 0, y: 0, width: bar.frame.width + 48, height: bar.frame.height + 48))
+            canvas.wantsLayer = true
+            let gradient = CAGradientLayer()
+            gradient.frame = canvas.bounds
+            gradient.startPoint = CGPoint(x: 0, y: 0)
+            gradient.endPoint = CGPoint(x: 1, y: 1)
+            gradient.colors = suffix == "dark"
+                ? [NSColor(calibratedRed: 0.10, green: 0.12, blue: 0.18, alpha: 1).cgColor,
+                   NSColor(calibratedRed: 0.17, green: 0.13, blue: 0.24, alpha: 1).cgColor]
+                : [NSColor(calibratedRed: 0.80, green: 0.86, blue: 0.93, alpha: 1).cgColor,
+                   NSColor(calibratedRed: 0.94, green: 0.90, blue: 0.83, alpha: 1).cgColor]
+            canvas.layer?.addSublayer(gradient)
+            bar.setFrameOrigin(NSPoint(x: 24, y: 24))
+            canvas.addSubview(bar)
+
+            try render(canvas, appearance: name, name: "detached-bar-\(suffix)", settle: 0.6)
+        }
     }
 
     @Test("settings tabs render in light and dark")

@@ -1,8 +1,19 @@
 import AppKit
 
+extension WindowLevelMode {
+    /// "Immer hinten" nutzt die Schreibtischsymbol-Ebene: sichtbar auf dem
+    /// Desktop, aber unter allen normalen Fenstern.
+    var nsWindowLevel: NSWindow.Level {
+        switch self {
+        case .alwaysOnTop: return .floating
+        case .normal: return .normal
+        case .alwaysBehind: return NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
+        }
+    }
+}
+
 @MainActor
 final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegate {
-    private static let desktopAccessoryLevel = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
     private let settings = AppSettings.shared
     private let attributedBarProvider: () -> NSAttributedString?
     private let stackedImageProvider: () -> NSImage?
@@ -26,7 +37,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
             defer: false
         )
         window.title = "SOLIX Leiste"
-        window.level = Self.desktopAccessoryLevel
+        window.level = settings.detachedBarLevel.nsWindowLevel
         window.isMovableByWindowBackground = !settings.lockDetachedMenuBar
         window.collectionBehavior = [.canJoinAllSpaces]
         window.hasShadow = true
@@ -60,6 +71,7 @@ final class DetachedMenuBarWindowController: NSWindowController, NSWindowDelegat
     func rebuild() {
         guard let window else { return }
         window.isMovableByWindowBackground = !settings.lockDetachedMenuBar
+        window.level = settings.detachedBarLevel.nsWindowLevel
         let attributedText = attributedBarProvider()
         let stackedImage = stackedImageProvider()
         let oldFrame = window.frame
@@ -267,6 +279,7 @@ private final class DetachedMenuBarView: NSView {
     private let stackedImage: NSImage?
     private let onClose: () -> Void
     private let settings = AppSettings.shared
+    private weak var closeButton: NSButton?
 
     init(attributedText: NSAttributedString?, stackedImage: NSImage?, onClose: @escaping () -> Void) {
         self.attributedText = attributedText
@@ -395,6 +408,47 @@ private final class DetachedMenuBarView: NSView {
                 closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -round(8 * settings.detachedMenuBarScale)),
                 closeButton.centerYAnchor.constraint(equalTo: centerYAnchor)
             ])
+
+            // Erst bei Maus über der Leiste einblenden: im Ruhezustand soll
+            // die Leiste nur Werte zeigen, kein Bedien-Element. Der Platz
+            // bleibt reserviert, damit beim Hover nichts umbricht.
+            closeButton.alphaValue = 0
+            self.closeButton = closeButton
+        }
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        ))
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        // Die Leiste wird bei jedem Refresh neu aufgebaut; steht der Zeiger
+        // dabei bereits über ihr, käme sonst kein mouseEntered mehr.
+        guard let window else { return }
+        closeButton?.alphaValue = window.frame.contains(NSEvent.mouseLocation) ? 1 : 0
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        setCloseButtonVisible(true)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        setCloseButtonVisible(false)
+    }
+
+    private func setCloseButtonVisible(_ visible: Bool) {
+        guard let closeButton else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            closeButton.animator().alphaValue = visible ? 1 : 0
         }
     }
 
@@ -477,7 +531,7 @@ private final class DetachedMenuBarView: NSView {
             .load
         case .grid:
             .gridImport
-        case .batteryFlow, .flow:
+        case .batteryFlow:
             .batteryCharging
         case .total:
             .yieldTotal

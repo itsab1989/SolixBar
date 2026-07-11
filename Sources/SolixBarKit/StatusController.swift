@@ -26,6 +26,7 @@ final class StatusController: NSObject {
 
     func start() {
         settings.migrateMenuBarGridMetricIfNeeded()
+        settings.migrateFlowMetricIfNeeded()
         applyAppearance()
         updateMenuBarIcon()
         setStatusTitle("SOLIX")
@@ -195,7 +196,8 @@ final class StatusController: NSObject {
             metrics: settings.barMetrics,
             showLabels: settings.showMetricLabels,
             showSymbols: settings.showMenuBarMetricSymbols,
-            showArrows: settings.showEnergyFlowArrows
+            showArrows: settings.showEnergyFlowArrows,
+            showColors: settings.showFlowColors
         )
     }
 
@@ -204,7 +206,8 @@ final class StatusController: NSObject {
             metrics: settings.detachedBarMetrics,
             showLabels: settings.detachedShowLabels,
             showSymbols: settings.detachedShowSymbols,
-            showArrows: settings.detachedShowArrows
+            showArrows: settings.detachedShowArrows,
+            showColors: settings.detachedShowFlowColors
         )
     }
 
@@ -236,7 +239,7 @@ final class StatusController: NSObject {
             return
         }
 
-        if options.showSymbols || options.showArrows || options.metrics.contains(.flow) {
+        if options.showSymbols || options.showArrows || options.showColors {
             setStatusAttributedTitle(formatter.attributedTitle(
                 for: snapshot,
                 scale: settings.menuBarScale,
@@ -689,6 +692,7 @@ final class StatusController: NSObject {
             String(settings.showMetricLabels),
             String(settings.showMenuBarMetricSymbols),
             String(settings.showEnergyFlowArrows),
+            String(settings.showFlowColors),
             String(settings.showMenuBarIcon),
             String(settings.menuBarStacked),
             String(settings.menuBarScale)
@@ -704,6 +708,7 @@ final class StatusController: NSObject {
         updateTitle()
         rebuildMenu()
         detachedMenuBarWindow?.rebuild()
+        detachedDashboardWindow?.rebuild()
         if refreshNow {
             refresh()
         }

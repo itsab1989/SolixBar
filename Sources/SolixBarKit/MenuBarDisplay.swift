@@ -27,6 +27,9 @@ struct MenuBarDisplayOptions: Sendable {
     var showLabels: Bool
     var showSymbols: Bool
     var showArrows: Bool
+    /// Rollenfarben auf Werten/Symbolen — unabhängig von der Flussrichtung;
+    /// Farben kosten keine Breite und bleiben daher auf allen Stufen erhalten.
+    var showColors: Bool = true
 
     func applying(_ level: MenuBarDisplayLevel) -> MenuBarDisplayOptions {
         var result = self

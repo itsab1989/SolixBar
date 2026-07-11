@@ -14,7 +14,6 @@ extension BarMetric {
         case .home: LocalizedText.text("Hauslast", "Home Load")
         case .grid: LocalizedText.text("Netzbezug", "Grid Import")
         case .batteryFlow: LocalizedText.text("Akku-Fluss", "Battery Flow")
-        case .flow: LocalizedText.text("Energiefluss", "Energy Flow")
         case .today: LocalizedText.text("Heutiger Ertrag", "Today's Yield")
         case .total: LocalizedText.text("Gesamtertrag", "Total Yield")
         case .status: "Status"
@@ -28,7 +27,6 @@ extension BarMetric {
         case .home: LocalizedText.text("Last", "Load")
         case .grid: LocalizedText.text("Netz", "Grid")
         case .batteryFlow: LocalizedText.text("Fluss", "Flow")
-        case .flow: "Flow"
         case .today: LocalizedText.text("Ertrag", "Yield")
         case .total: LocalizedText.text("Gesamt", "Total")
         case .status: "Status"
