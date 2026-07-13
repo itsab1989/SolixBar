@@ -64,7 +64,7 @@ Einstellungen mit sortierbarer Werte-Auswahl und optionalen Warnungen: / Setting
 
 ## Version / Version
 
-Aktuelle Version / Current version: `0.4.2`
+Aktuelle Version / Current version: `0.4.3`
 
 Versionshinweise stehen in [CHANGELOG.md](CHANGELOG.md). / See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
