@@ -1,5 +1,9 @@
 # Changelog
 
+<p align="center">
+  <a href="https://ko-fi.com/itsab1989"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support SolixBar on Ko-fi" height="36"></a>
+</p>
+
 ## 0.4.3 - 2026-07-13
 
 - DE: Verlaufsgraph: Kurven lassen sich optional glätten (weiche, fliessende Kurven, die durch alle Messpunkte laufen und auf die Plotfläche geklemmt sind, damit ein Bogen nie scheinbar negative Watt unter die Nulllinie zieht), und die dezente Flächenfüllung unter den Kurven ist jetzt je Kurve (Akku, Solar, Netzbezug) einzeln wählbar — beides unter App → Dashboard. Die Demo-Datenquelle zeigt den Akkustand jetzt als langsame, realistische Lade-/Entladekurve statt als Minuten-Sägezahn.

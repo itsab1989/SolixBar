@@ -72,19 +72,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Prefer the hand-written CHANGELOG.md entry for this version (has
+          # the real DE/EN release notes); fall back to the raw commit log
+          # since the previous tag so release notes are never empty.
+          BODY=$(awk "/^## ${VERSION} /{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md | sed '/^[[:space:]]*$/d')
+          if [ -z "$BODY" ]; then
+            PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+            if [ -n "$PREV_TAG" ]; then
+              COMMITS=$(git log --no-merges --pretty='- %s' "${PREV_TAG}..${GITHUB_REF_NAME}")
+              BODY=$(printf '## Changelog\n%s\n\nKompletter Diff: https://github.com/%s/compare/%s...%s' "$COMMITS" "${GITHUB_REPOSITORY}" "$PREV_TAG" "${GITHUB_REF_NAME}")
+            else
+              COMMITS=$(git log --no-merges --pretty='- %s' "${GITHUB_REF_NAME}")
+              BODY=$(printf '## Changelog\n%s' "$COMMITS")
+            fi
+          fi
           {
             echo "Hinweis: Das Bundle ist ad-hoc signiert. Beim ersten Start: Rechtsklick -> \"Oeffnen\"."
             echo "Note: The bundle is ad-hoc signed. First launch: right-click -> \"Open\"."
             echo
-            echo "## Changelog"
-            if [ -n "$PREV_TAG" ]; then
-              git log --no-merges --pretty='- %s' "${PREV_TAG}..${GITHUB_REF_NAME}"
-              echo
-              echo "Kompletter Diff: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${GITHUB_REF_NAME}"
-            else
-              git log --no-merges --pretty='- %s' "${GITHUB_REF_NAME}"
-            fi
+            printf '%s\n' "$BODY"
+            echo
+            echo "---"
+            echo "☕ SolixBar ist kostenlos und bleibt es. Wenn es dir nützt, ist ein Kaffee eine nette Art, Danke zu sagen — völlig optional."
+            echo "☕ SolixBar is free and always will be. If it's useful to you, a coffee is a kind way to say thanks — completely optional."
+            echo
+            echo "[![Support SolixBar on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/itsab1989)"
           } > release-notes.md
           gh release create "${GITHUB_REF_NAME}" --title "SolixBar ${GITHUB_REF_NAME}" --notes-file release-notes.md || true
           gh release upload "${GITHUB_REF_NAME}" SolixBar-macOS.zip --clobber

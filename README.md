@@ -10,6 +10,14 @@ Die Projekt-Homepage liegt in [`docs/`](docs/) und kann mit GitHub Pages veroeff
 
 English: Project homepage files are in [`docs/`](docs/) and can be published with GitHub Pages.
 
+<p align="center">
+  <a href="https://ko-fi.com/itsab1989"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support SolixBar on Ko-fi" height="36"></a>
+  <br>
+  <sub>SolixBar ist kostenlos und bleibt es. Wenn es dir nützt, ist ein Kaffee eine nette Art, Danke zu sagen — völlig optional.</sub>
+  <br>
+  <sub>SolixBar is free and always will be. If it's useful to you, a coffee is a kind way to say thanks — completely optional.</sub>
+</p>
+
 ## Screenshots / Screenshots
 
 Alle Bilder zeigen Demo-Daten. / All images show demo data.
